@@ -6,7 +6,10 @@ from core.models import CustomUser, Profile
 
 
 @admin.register(CustomUser)
-class CustomUserAdmin(UserAdmin, ModelAdmin): ...
+class CustomUserAdmin(UserAdmin, ModelAdmin):
+    fieldsets = UserAdmin.fieldsets + (
+        ("Initial password", {"fields": ("must_change_password",)}),
+    )
 
 
 @admin.register(Profile)

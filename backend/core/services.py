@@ -31,6 +31,7 @@ def create_employee(
         first_name=first_name.strip(),
         last_name=last_name.strip(),
         is_active=is_active,
+        must_change_password=True,
     )
     employee.set_password(personnel_number)
     employee.full_clean()

@@ -5,6 +5,8 @@ from django.db import models
 class CustomUser(AbstractUser):
     """Project user model; employee fields will live in the Profile model."""
 
+    must_change_password = models.BooleanField(default=False)
+
 
 class Profile(models.Model):
     user = models.OneToOneField(
