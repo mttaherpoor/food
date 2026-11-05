@@ -19,6 +19,7 @@ def test_create_employee_uses_personnel_number_for_username_and_password():
 
     assert employee.username == "001234"
     assert employee.check_password("001234")
+    assert employee.must_change_password is True
     assert employee.profile.personnel_number == "001234"
     assert employee.profile.building_number == "07"
     assert employee.profile.department_number == "003"
