@@ -1,9 +1,11 @@
-import pytest
 from django.contrib.auth.models import Group
+
+import pytest
 
 from core.roles import (
     EMPLOYEE_ROLE,
     HR_FOOD_CORE_PERMISSIONS,
+    HR_FOOD_FOOD_PERMISSIONS,
     HR_FOOD_ROLE,
     VIEWER_ROLE,
 )
@@ -12,9 +14,7 @@ from core.roles import (
 @pytest.mark.django_db
 def test_required_groups_are_provisioned():
     assert set(
-        Group.objects.filter(
-            name__in=(HR_FOOD_ROLE, EMPLOYEE_ROLE, VIEWER_ROLE)
-        ).values_list("name", flat=True)
+        Group.objects.filter(name__in=(HR_FOOD_ROLE, EMPLOYEE_ROLE, VIEWER_ROLE)).values_list('name', flat=True)
     ) == {HR_FOOD_ROLE, EMPLOYEE_ROLE, VIEWER_ROLE}
 
 
@@ -22,9 +22,17 @@ def test_required_groups_are_provisioned():
 def test_hr_food_receives_only_current_core_management_permissions():
     hr_food = Group.objects.get(name=HR_FOOD_ROLE)
     permission_codes = set(
-        hr_food.permissions.filter(content_type__app_label="core").values_list(
-            "codename", flat=True
-        )
+        hr_food.permissions.filter(content_type__app_label='core').values_list('codename', flat=True)
     )
 
     assert permission_codes == set(HR_FOOD_CORE_PERMISSIONS)
+
+
+@pytest.mark.django_db
+def test_hr_food_receives_food_management_permissions():
+    hr_food = Group.objects.get(name=HR_FOOD_ROLE)
+    permission_codes = set(
+        hr_food.permissions.filter(content_type__app_label='food').values_list('codename', flat=True)
+    )
+
+    assert permission_codes == set(HR_FOOD_FOOD_PERMISSIONS)
