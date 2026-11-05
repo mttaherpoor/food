@@ -1,9 +1,10 @@
-from typing import ClassVar
-
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+
+from typing import ClassVar
+
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import generics, serializers, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -28,30 +29,30 @@ class HealthCheckView(APIView):
 
     @extend_schema(
         responses=inline_serializer(
-            name="HealthResponse",
-            fields={"status": serializers.CharField()},
+            name='HealthResponse',
+            fields={'status': serializers.CharField()},
         )
     )
     def get(self, request):
-        return Response({"status": "ok"})
+        return Response({'status': 'ok'})
 
 
-@method_decorator(ensure_csrf_cookie, name="dispatch")
+@method_decorator(ensure_csrf_cookie, name='dispatch')
 class CsrfTokenView(APIView):
     authentication_classes: ClassVar[list] = []
     permission_classes: ClassVar[list] = [AllowAny]
 
     @extend_schema(
         responses=inline_serializer(
-            name="CsrfTokenResponse",
-            fields={"csrf_token": serializers.CharField()},
+            name='CsrfTokenResponse',
+            fields={'csrf_token': serializers.CharField()},
         )
     )
     def get(self, request):
-        return Response({"csrf_token": get_token(request)})
+        return Response({'csrf_token': get_token(request)})
 
 
-@method_decorator(csrf_protect, name="dispatch")
+@method_decorator(csrf_protect, name='dispatch')
 class LoginView(generics.GenericAPIView):
     authentication_classes: ClassVar[list] = []
     permission_classes: ClassVar[list] = [AllowAny]
@@ -61,7 +62,7 @@ class LoginView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data["user"]
+        user = serializer.validated_data['user']
         login(request, user)
         return Response(SessionUserSerializer(user).data)
 
@@ -83,9 +84,9 @@ class ChangePasswordView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = request.user
-        user.set_password(serializer.validated_data["new_password"])
+        user.set_password(serializer.validated_data['new_password'])
         user.must_change_password = False
-        user.save(update_fields=("password", "must_change_password"))
+        user.save(update_fields=('password', 'must_change_password'))
         update_session_auth_hash(request, user)
         return Response(SessionUserSerializer(user).data)
 
@@ -105,28 +106,24 @@ class EmployeeListCreateView(generics.ListCreateAPIView):
         HasChangedInitialPassword,
         IsHRFoodOrSuperAdmin,
     ]
-    queryset = CustomUser.objects.filter(profile__isnull=False).select_related(
-        "profile"
-    )
+    queryset = CustomUser.objects.filter(profile__isnull=False).select_related('profile')
 
     def get_serializer_class(self):
-        if self.request.method == "POST":
+        if self.request.method == 'POST':
             return EmployeeCreateSerializer
         return EmployeeSerializer
 
 
 class EmployeeDetailView(generics.RetrieveUpdateAPIView):
-    http_method_names: ClassVar[list] = ["get", "patch", "head", "options"]
+    http_method_names: ClassVar[list] = ['get', 'patch', 'head', 'options']
     permission_classes: ClassVar[list] = [
         IsAuthenticated,
         HasChangedInitialPassword,
         IsHRFoodOrSuperAdmin,
     ]
-    queryset = CustomUser.objects.filter(profile__isnull=False).select_related(
-        "profile"
-    )
+    queryset = CustomUser.objects.filter(profile__isnull=False).select_related('profile')
 
     def get_serializer_class(self):
-        if self.request.method == "PATCH":
+        if self.request.method == 'PATCH':
             return EmployeeUpdateSerializer
         return EmployeeSerializer

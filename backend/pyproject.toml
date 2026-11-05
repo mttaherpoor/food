@@ -26,5 +26,73 @@ python_files = ["test_*.py", "*_test.py", "tests.py"]
 testpaths = ["tests"]
 addopts = "--strict-markers --disable-warnings"
 
-# No custom Ruff rules are introduced in this phase. Ruff uses its defaults.
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+extend-exclude = [
+    "**/migrations/**",
+    ".hypothesis",
+    ".venv",
+    "static",
+    "media",
+]
+force-exclude = true
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "I",
+    "UP",
+    "B",
+    "SIM",
+    "PTH",
+    "RET",
+    "C4",
+    "PIE",
+    "RUF",
+    "S",
+    "T20",
+]
+ignore = [
+    "E501",
+    "B027",
+    "C901",
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["S101", "S106"]
+"**/tests.py" = ["S106"]
+"**/__init__.py" = ["F401"]
+"manage.py" = ["T20"]
+"core/apps.py" = ["F401"]
+"config/settings/*.py" = ["F403", "F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "core", "food"]
+section-order = [
+    "future",
+    "django",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+combine-as-imports = true
+force-sort-within-sections = true
+split-on-trailing-comma = true
+
+[tool.ruff.lint.isort.sections]
+django = ["django", "django.*"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
 

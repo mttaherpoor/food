@@ -11,7 +11,7 @@ UNSET = object()
 def normalize_personnel_number(value: str) -> str:
     normalized = value.strip()
     if not normalized:
-        raise ValidationError({"personnel_number": "Personnel number is required."})
+        raise ValidationError({'personnel_number': 'Personnel number is required.'})
     return normalized
 
 
@@ -21,8 +21,8 @@ def create_employee(
     personnel_number: str,
     building_number: str,
     department_number: str,
-    first_name: str = "",
-    last_name: str = "",
+    first_name: str = '',
+    last_name: str = '',
     is_active: bool = True,
 ) -> CustomUser:
     personnel_number = normalize_personnel_number(personnel_number)
