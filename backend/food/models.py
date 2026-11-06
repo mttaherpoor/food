@@ -11,9 +11,16 @@ class TimestampedModel(models.Model):
 
 class Food(TimestampedModel):
     name = models.CharField(max_length=255)
-    price = models.PositiveBigIntegerField()
-    container_price = models.PositiveBigIntegerField()
+    price = models.PositiveBigIntegerField(
+        verbose_name='price (Toman)',
+        help_text='Whole amount in Toman.',
+    )
+    container_price = models.PositiveBigIntegerField(
+        verbose_name='container price (Toman)',
+        help_text='Whole amount in Toman.',
+    )
     total_price = models.GeneratedField(
+        verbose_name='total price (Toman)',
         expression=models.F('price') + models.F('container_price'),
         output_field=models.PositiveBigIntegerField(),
         db_persist=True,
@@ -25,7 +32,10 @@ class Food(TimestampedModel):
 
 class Side(TimestampedModel):
     name = models.CharField(max_length=255)
-    price = models.PositiveBigIntegerField()
+    price = models.PositiveBigIntegerField(
+        verbose_name='price (Toman)',
+        help_text='Whole amount in Toman.',
+    )
 
     def __str__(self) -> str:
         return self.name
@@ -33,7 +43,10 @@ class Side(TimestampedModel):
 
 class Drink(TimestampedModel):
     name = models.CharField(max_length=255)
-    price = models.PositiveBigIntegerField()
+    price = models.PositiveBigIntegerField(
+        verbose_name='price (Toman)',
+        help_text='Whole amount in Toman.',
+    )
 
     def __str__(self) -> str:
         return self.name
