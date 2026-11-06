@@ -8,10 +8,14 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.cell.cell import Cell
 
-from food.models import Food, Menu
+from food.models import Drink, Food, Menu, Side
 
-MENU_SHEET = 'Menus'
-MENU_HEADERS = ('date', 'food', 'food_price_toman')
+MENU_SHEET = 'Foods'
+MENU_HEADERS = ('date', 'name', 'price_toman', 'container_price_toman', 'special_container_price_toman')
+CATALOG_SHEETS = {
+    'Sides': (Side, ('name', 'price_toman')),
+    'Drinks': (Drink, ('name', 'price_toman')),
+}
 
 
 class MenuWorkbookValidationError(Exception):
@@ -67,6 +71,10 @@ def _cell_toman(cell: Cell) -> int:
     return amount
 
 
+def _optional_toman(cell: Cell) -> int:
+    return 0 if cell.value is None or cell.value == '' else _cell_toman(cell)
+
+
 def read_menu_rows(path: Path) -> list[MenuImportRow]:
     if path.suffix.lower() != '.xlsx':
         raise MenuWorkbookValidationError(['Only .xlsx files are supported.'])
@@ -80,22 +88,39 @@ def read_menu_rows(path: Path) -> list[MenuImportRow]:
     errors: list[str] = []
     rows: list[MenuImportRow] = []
     try:
+        expected_sheets = {MENU_SHEET, *CATALOG_SHEETS}
+        unexpected_sheets = set(workbook.sheetnames) - expected_sheets
+        if unexpected_sheets:
+            errors.append(f'Unexpected sheets: {", ".join(sorted(unexpected_sheets))}')
         if MENU_SHEET not in workbook.sheetnames:
             raise MenuWorkbookValidationError([f'Missing required sheet: {MENU_SHEET}'])
+        for sheet_name, (_, expected_headers) in CATALOG_SHEETS.items():
+            if sheet_name not in workbook.sheetnames:
+                errors.append(f'Missing required sheet: {sheet_name}')
+                continue
+            catalog_headers = tuple(
+                _cell_text(cell) for cell in next(workbook[sheet_name].iter_rows(min_row=1, max_row=1))
+            )
+            if catalog_headers != expected_headers:
+                errors.append(f'{sheet_name}!1: expected headers {", ".join(expected_headers)}')
         sheet = workbook[MENU_SHEET]
-        headers = tuple(_cell_text(cell) for cell in next(sheet.iter_rows(min_row=1, max_row=1)))
+        headers = tuple(
+            _cell_text(cell) for cell in next(sheet.iter_rows(min_row=1, max_row=1, max_col=len(MENU_HEADERS)))
+        )
         if headers != MENU_HEADERS:
-            raise MenuWorkbookValidationError([f'{MENU_SHEET}!1: expected headers {", ".join(MENU_HEADERS)}'])
+            errors.append(f'{MENU_SHEET}!1: expected headers {", ".join(MENU_HEADERS)}')
 
         seen_dates: set[date] = set()
-        for cells in sheet.iter_rows(min_row=2, max_col=3):
+        for cells in sheet.iter_rows(min_row=2, max_col=len(MENU_HEADERS)):
             if all(cell.value is None for cell in cells):
                 continue
             row_number = cells[0].row
             try:
                 menu_date = _cell_date(cells[0])
                 food_name = _cell_text(cells[1], required=True)
-                food_price = _cell_toman(cells[2])
+                meal_price = _cell_toman(cells[2])
+                container_prices = (_cell_toman(cells[3]), _optional_toman(cells[4]))
+                food_price = meal_price + max(container_prices)
                 if menu_date in seen_dates:
                     raise ValueError(f'duplicate menu date: {menu_date.isoformat()}')
                 seen_dates.add(menu_date)
@@ -109,6 +134,26 @@ def read_menu_rows(path: Path) -> list[MenuImportRow]:
                 rows.append(MenuImportRow(row_number, menu_date, food, food_price, existing is not None))
             except (TypeError, ValueError, ValidationError) as exc:
                 errors.append(f'{MENU_SHEET}!{row_number}: {exc}')
+        for sheet_name, (model, expected_headers) in CATALOG_SHEETS.items():
+            if sheet_name not in workbook.sheetnames:
+                continue
+            catalog_sheet = workbook[sheet_name]
+            seen_names: set[str] = set()
+            for cells in catalog_sheet.iter_rows(min_row=2, max_col=len(expected_headers)):
+                if all(cell.value is None for cell in cells):
+                    continue
+                row_number = cells[0].row
+                try:
+                    name = _cell_text(cells[0], required=True)
+                    price = _cell_toman(cells[1])
+                    if name in seen_names:
+                        raise ValueError(f'duplicate name: {name}')
+                    seen_names.add(name)
+                    existing_item = model.objects.filter(name=name).first()
+                    if existing_item and existing_item.price != price:
+                        raise ValueError(f'{name} already exists with a different price')
+                except (TypeError, ValueError) as exc:
+                    errors.append(f'{sheet_name}!{row_number}: {exc}')
         if not rows:
             errors.append(f'{MENU_SHEET}: no data rows found')
         if errors:
@@ -121,12 +166,27 @@ def read_menu_rows(path: Path) -> list[MenuImportRow]:
 @transaction.atomic
 def import_monthly_menu(path: Path, *, dry_run: bool = False) -> dict[str, int]:
     rows = read_menu_rows(path)
-    counts = {'created': 0, 'unchanged': 0}
+    counts = {'menus_created': 0, 'menus_unchanged': 0, 'sides': 0, 'drinks': 0}
     for row in rows:
         if row.is_existing:
-            counts['unchanged'] += 1
+            counts['menus_unchanged'] += 1
             continue
         if not dry_run:
             Menu.objects.create(date=row.menu_date, food=row.food, food_price=row.food_price)
-        counts['created'] += 1
+        counts['menus_created'] += 1
+    workbook = load_workbook(path, read_only=True, data_only=False)
+    try:
+        for sheet_name, (model, _) in CATALOG_SHEETS.items():
+            sheet = workbook[sheet_name]
+            for cells in sheet.iter_rows(min_row=2, max_col=2):
+                if all(cell.value is None for cell in cells):
+                    continue
+                name = _cell_text(cells[0], required=True)
+                price = _cell_toman(cells[1])
+                if not model.objects.filter(name=name).exists():
+                    if not dry_run:
+                        model.objects.create(name=name, price=price)
+                    counts[sheet_name.lower()] += 1
+    finally:
+        workbook.close()
     return counts
