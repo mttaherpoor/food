@@ -1,10 +1,10 @@
 from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import generics, serializers, status
+from rest_framework import mixins, serializers, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
-from django.contrib.auth import login, logout, update_session_auth_hash
+from django.contrib.auth import login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -23,7 +23,7 @@ from core.serializers import (
 )
 
 
-class HealthCheckView(APIView):
+class HealthViewSet(viewsets.ViewSet):
     authentication_classes: ClassVar[list] = []
     permission_classes: ClassVar[list] = [AllowAny]
 
@@ -33,14 +33,21 @@ class HealthCheckView(APIView):
             fields={'status': serializers.CharField()},
         )
     )
-    def get(self, request):
+    def list(self, request):
         return Response({'status': 'ok'})
 
 
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class CsrfTokenView(APIView):
-    authentication_classes: ClassVar[list] = []
-    permission_classes: ClassVar[list] = [AllowAny]
+class AuthViewSet(viewsets.GenericViewSet):
+    permission_classes: ClassVar[list] = [IsAuthenticated]
+    serializer_class = SessionUserSerializer
+
+    def get_serializer_class(self):
+        serializer_classes = {
+            'login': LoginSerializer,
+            'session': SessionUserSerializer,
+            'change_password': ChangePasswordSerializer,
+        }
+        return serializer_classes.get(self.action, self.serializer_class)
 
     @extend_schema(
         responses=inline_serializer(
@@ -48,39 +55,38 @@ class CsrfTokenView(APIView):
             fields={'csrf_token': serializers.CharField()},
         )
     )
-    def get(self, request):
+    @action(
+        detail=False,
+        methods=['get'],
+        authentication_classes=[],
+        permission_classes=[AllowAny],
+    )
+    @method_decorator(ensure_csrf_cookie)
+    def csrf(self, request):
         return Response({'csrf_token': get_token(request)})
 
-
-@method_decorator(csrf_protect, name='dispatch')
-class LoginView(generics.GenericAPIView):
-    authentication_classes: ClassVar[list] = []
-    permission_classes: ClassVar[list] = [AllowAny]
-    serializer_class = LoginSerializer
-
     @extend_schema(responses={200: SessionUserSerializer})
-    def post(self, request):
+    @action(
+        detail=False,
+        methods=['post'],
+        authentication_classes=[],
+        permission_classes=[AllowAny],
+    )
+    @method_decorator(csrf_protect)
+    def login(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        login(request, user)
+        auth_login(request, user)
         return Response(SessionUserSerializer(user).data)
 
-
-class SessionView(generics.GenericAPIView):
-    permission_classes: ClassVar[list] = [IsAuthenticated]
-    serializer_class = SessionUserSerializer
-
-    def get(self, request):
+    @action(detail=False, methods=['get'])
+    def session(self, request):
         return Response(self.get_serializer(request.user).data)
 
-
-class ChangePasswordView(generics.GenericAPIView):
-    permission_classes: ClassVar[list] = [IsAuthenticated]
-    serializer_class = ChangePasswordSerializer
-
     @extend_schema(responses={200: SessionUserSerializer})
-    def post(self, request):
+    @action(detail=False, methods=['post'], url_path='change-password')
+    def change_password(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = request.user
@@ -90,17 +96,21 @@ class ChangePasswordView(generics.GenericAPIView):
         update_session_auth_hash(request, user)
         return Response(SessionUserSerializer(user).data)
 
-
-class LogoutView(APIView):
-    permission_classes: ClassVar[list] = [IsAuthenticated]
-
     @extend_schema(request=None, responses={204: None})
-    def post(self, request):
-        logout(request)
+    @action(detail=False, methods=['post'])
+    def logout(self, request):
+        auth_logout(request)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class EmployeeListCreateView(generics.ListCreateAPIView):
+class EmployeeViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    viewsets.GenericViewSet,
+):
+    http_method_names: ClassVar[list] = ['get', 'post', 'patch', 'head', 'options']
     permission_classes: ClassVar[list] = [
         IsAuthenticated,
         HasChangedInitialPassword,
@@ -109,21 +119,8 @@ class EmployeeListCreateView(generics.ListCreateAPIView):
     queryset = CustomUser.objects.filter(profile__isnull=False).select_related('profile')
 
     def get_serializer_class(self):
-        if self.request.method == 'POST':
+        if self.action == 'create':
             return EmployeeCreateSerializer
-        return EmployeeSerializer
-
-
-class EmployeeDetailView(generics.RetrieveUpdateAPIView):
-    http_method_names: ClassVar[list] = ['get', 'patch', 'head', 'options']
-    permission_classes: ClassVar[list] = [
-        IsAuthenticated,
-        HasChangedInitialPassword,
-        IsHRFoodOrSuperAdmin,
-    ]
-    queryset = CustomUser.objects.filter(profile__isnull=False).select_related('profile')
-
-    def get_serializer_class(self):
-        if self.request.method == 'PATCH':
+        if self.action == 'partial_update':
             return EmployeeUpdateSerializer
         return EmployeeSerializer

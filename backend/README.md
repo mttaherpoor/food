@@ -8,7 +8,7 @@ Django REST Framework API for the food reservation system.
    and replace the placeholder with a strong local value.
 2. Optionally copy `.env.example` to `.env` for non-sensitive configuration.
 3. Start the services with `docker compose up --build` from the repository root.
-4. Open `/api/health/`, `/api/schema/`, or `/api/docs/` on port 8000.
+4. Open `/api/v1/health`, `/api/v1/schema`, or `/api/v1/docs` on port 8000.
 
 Database migrations are intentionally not applied automatically by the image.
 Run them only as an explicit reviewed operation.
