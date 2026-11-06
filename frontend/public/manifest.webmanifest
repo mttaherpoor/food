@@ -1,0 +1,15 @@
+{
+  "name": "رزرو غذای کارکنان پی‌آی",
+  "short_name": "رزرو غذا",
+  "description": "انتخاب غذای روزانه و مشاهدهٔ سوابق رزرو",
+  "lang": "fa-IR",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f9fbfc",
+  "theme_color": "#f9fbfc",
+  "icons": [
+    { "src": "/static/app/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

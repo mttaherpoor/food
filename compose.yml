@@ -1,6 +1,19 @@
 name: food-reservation
 
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - shared_net
+
   db:
     image: postgres:17-bookworm
     restart: unless-stopped
@@ -10,6 +23,8 @@ services:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
       - postgres_password
+    networks:
+      - backend
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,13 +39,14 @@ services:
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile
       target: development
     restart: unless-stopped
     environment:
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE:-config.settings.development}
       DJANGO_DEBUG: ${DJANGO_DEBUG:-true}
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://localhost:5173,http://127.0.0.1:5173}
       DJANGO_SECRET_KEY_FILE: /run/secrets/django_secret_key
       POSTGRES_DB: ${POSTGRES_DB:-food_reservation}
       POSTGRES_USER: ${POSTGRES_USER:-food_reservation}
@@ -42,11 +58,12 @@ services:
       - postgres_password
     volumes:
       - ./backend:/app
-    ports:
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - backend
+      - shared_net
     command: python manage.py runserver 0.0.0.0:8000
     healthcheck:
       test:
@@ -61,6 +78,13 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  backend:
+    internal: true
+  shared_net:
+    name: shared_net
+    external: true
 
 secrets:
   django_secret_key:
