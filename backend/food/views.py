@@ -1,7 +1,7 @@
-from typing import ClassVar
-
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
+
+from typing import ClassVar
 
 from core.permissions import HasChangedInitialPassword, IsHRFoodOrSuperAdmin
 from food.models import Drink, Food, Menu, Side

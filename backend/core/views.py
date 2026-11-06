@@ -1,15 +1,15 @@
+from drf_spectacular.utils import extend_schema, inline_serializer
+from rest_framework import generics, serializers, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 
 from typing import ClassVar
-
-from drf_spectacular.utils import extend_schema, inline_serializer
-from rest_framework import generics, serializers, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from core.models import CustomUser
 from core.permissions import HasChangedInitialPassword, IsHRFoodOrSuperAdmin

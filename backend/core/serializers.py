@@ -1,8 +1,8 @@
-from django.contrib.auth import authenticate, password_validation
-from django.core.exceptions import ValidationError as DjangoValidationError
-
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
+
+from django.contrib.auth import authenticate, password_validation
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 from core.models import CustomUser
 from core.services import create_employee, update_employee

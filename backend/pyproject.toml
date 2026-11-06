@@ -10,6 +10,7 @@ dependencies = [
     "djangorestframework>=3.16,<4",
     "drf-spectacular>=0.29,<1",
     "gunicorn>=23,<24",
+    "openpyxl>=3.1,<4",
     "psycopg[binary]>=3.2,<4",
 ]
 
@@ -75,6 +76,7 @@ unfixable = []
 known-first-party = ["config", "core", "food"]
 section-order = [
     "future",
+    "drf",
     "django",
     "standard-library",
     "third-party",
@@ -86,6 +88,14 @@ force-sort-within-sections = true
 split-on-trailing-comma = true
 
 [tool.ruff.lint.isort.sections]
+drf = [
+    "rest_framework",
+    "rest_framework.*",
+    "rest_framework_nested",
+    "rest_framework_nested.*",
+    "drf_spectacular",
+    "drf_spectacular.*",
+]
 django = ["django", "django.*"]
 
 [tool.ruff.format]
