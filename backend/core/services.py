@@ -37,12 +37,10 @@ def create_employee(
     employee.full_clean()
     employee.save()
 
-    profile = Profile(
-        user=employee,
-        personnel_number=personnel_number,
-        building_number=building_number.strip(),
-        department_number=department_number.strip(),
-    )
+    profile = employee.profile
+    profile.personnel_number = personnel_number
+    profile.building_number = building_number.strip()
+    profile.department_number = department_number.strip()
     profile.full_clean()
     profile.save()
     employee.groups.add(Group.objects.get_or_create(name=EMPLOYEE_ROLE)[0])

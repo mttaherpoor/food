@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 
 import pytest
 
-from core.models import CustomUser, Profile
+from core.models import CustomUser
 from core.roles import EMPLOYEE_ROLE
 from core.services import create_employee, update_employee
 
@@ -73,14 +73,11 @@ def test_create_employee_rolls_back_when_required_profile_data_is_empty():
 @pytest.mark.django_db
 def test_profile_personnel_number_follows_username():
     employee = CustomUser.objects.create_user(username='001234', password='password')
-    profile = Profile.objects.create(
-        user=employee,
-        personnel_number='different-value',
-        building_number='07',
-        department_number='003',
-    )
+    profile = employee.profile
 
     assert profile.personnel_number == '001234'
+    assert profile.building_number == ''
+    assert profile.department_number == ''
 
     employee.username = '009876'
     employee.save()

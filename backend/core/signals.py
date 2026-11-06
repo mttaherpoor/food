@@ -5,7 +5,14 @@ from core.models import CustomUser, Profile
 
 
 @receiver(post_save, sender=CustomUser)
-def synchronize_profile_personnel_number(sender, instance: CustomUser, **kwargs) -> None:
-    Profile.objects.filter(user=instance).exclude(personnel_number=instance.username).update(
-        personnel_number=instance.username
+def create_or_synchronize_profile(sender, instance: CustomUser, **kwargs) -> None:
+    profile, created = Profile.objects.get_or_create(
+        user=instance,
+        defaults={
+            'personnel_number': instance.username,
+            'building_number': '',
+            'department_number': '',
+        },
     )
+    if not created and profile.personnel_number != instance.username:
+        Profile.objects.filter(pk=profile.pk).update(personnel_number=instance.username)
