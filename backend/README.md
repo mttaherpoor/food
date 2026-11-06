@@ -10,6 +10,12 @@ Django REST Framework API for the food reservation system.
 3. Start the services with `docker compose up --build` from the repository root.
 4. Open `/api/v1/health`, `/api/v1/schema`, or `/api/v1/docs` on port 8000.
 
+Employees can read their own reservation history at `GET /api/v1/reservations`.
+The weekly menu is available at `GET /api/v1/reservations/weekly?start=YYYY-MM-DD`.
+HR and Viewer can read the daily summary at
+`GET /api/v1/reports/daily?from=YYYY-MM-DD&to=YYYY-MM-DD`. Viewer access to food,
+side, drink, and menu catalogs is read-only.
+
 Database migrations are intentionally not applied automatically by the image.
 Run them only as an explicit reviewed operation.
 
