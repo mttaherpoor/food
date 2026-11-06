@@ -26,8 +26,6 @@ def test_hr_food_can_create_employee_with_initial_password(client):
         reverse('employee-list'),
         {
             'personnel_number': '001234',
-            'first_name': 'Taher',
-            'last_name': 'Poor',
             'building_number': '07',
             'department_number': '003',
         },
@@ -37,7 +35,11 @@ def test_hr_food_can_create_employee_with_initial_password(client):
     employee = CustomUser.objects.get(username='001234')
     assert employee.check_password('001234')
     assert employee.must_change_password is True
+    assert employee.first_name == ''
+    assert employee.last_name == ''
     assert response.json()['personnel_number'] == '001234'
+    assert response.json()['first_name'] == ''
+    assert response.json()['last_name'] == ''
 
 
 @pytest.mark.django_db

@@ -21,15 +21,11 @@ def create_employee(
     personnel_number: str,
     building_number: str,
     department_number: str,
-    first_name: str = '',
-    last_name: str = '',
     is_active: bool = True,
 ) -> CustomUser:
     personnel_number = normalize_personnel_number(personnel_number)
     employee = CustomUser(
         username=personnel_number,
-        first_name=first_name.strip(),
-        last_name=last_name.strip(),
         is_active=is_active,
         must_change_password=True,
     )
@@ -54,8 +50,6 @@ def update_employee(
     personnel_number: str | object = UNSET,
     building_number: str | object = UNSET,
     department_number: str | object = UNSET,
-    first_name: str | object = UNSET,
-    last_name: str | object = UNSET,
     is_active: bool | object = UNSET,
 ) -> CustomUser:
     employee = CustomUser.objects.select_for_update().get(pk=employee.pk)
@@ -63,10 +57,6 @@ def update_employee(
 
     if personnel_number is not UNSET:
         employee.username = normalize_personnel_number(str(personnel_number))
-    if first_name is not UNSET:
-        employee.first_name = str(first_name).strip()
-    if last_name is not UNSET:
-        employee.last_name = str(last_name).strip()
     if is_active is not UNSET:
         employee.is_active = bool(is_active)
 

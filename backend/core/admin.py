@@ -19,9 +19,5 @@ class ProfileAdmin(ModelAdmin):
         'building_number',
         'department_number',
     )
-    search_fields = (
-        'personnel_number',
-        'user__first_name',
-        'user__last_name',
-    )
+    search_fields = ('personnel_number',)
     list_select_related = ('user',)

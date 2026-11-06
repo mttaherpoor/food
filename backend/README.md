@@ -25,7 +25,10 @@ python manage.py import_catalog sample_data/sample_catalog.xlsx --dry-run
 ```
 
 Remove `--dry-run` to import the records. Imports are create-only and atomic: an
-invalid or existing personnel number/name prevents the entire workbook from being
+invalid or existing personnel number or catalog name prevents the entire workbook from being
 written. Employee passwords initially equal their personnel numbers and must be
 changed at first sign-in.
+
+The employee workbook contains personnel number, building number, department
+number, and active status. Employee names are not imported.
 

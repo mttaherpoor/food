@@ -14,8 +14,6 @@ from core.services import create_employee
 EMPLOYEE_SHEET = 'Employees'
 EMPLOYEE_HEADERS = (
     'personnel_number',
-    'first_name',
-    'last_name',
     'building_number',
     'department_number',
     'is_active',
@@ -26,8 +24,6 @@ EMPLOYEE_HEADERS = (
 class EmployeeImportRow:
     row_number: int
     personnel_number: str
-    first_name: str
-    last_name: str
     building_number: str
     department_number: str
     is_active: bool
@@ -111,11 +107,9 @@ def read_employee_rows(path: Path) -> list[EmployeeImportRow]:
                 row = EmployeeImportRow(
                     row_number=row_number,
                     personnel_number=personnel_number,
-                    first_name=_cell_text(cells[1]),
-                    last_name=_cell_text(cells[2]),
-                    building_number=_cell_text(cells[3], required=True),
-                    department_number=_cell_text(cells[4], required=True),
-                    is_active=_cell_boolean(cells[5]),
+                    building_number=_cell_text(cells[1], required=True),
+                    department_number=_cell_text(cells[2], required=True),
+                    is_active=_cell_boolean(cells[3]),
                 )
                 if personnel_number in seen_personnel_numbers:
                     raise ValueError(f'duplicate personnel_number: {personnel_number}')
@@ -146,8 +140,6 @@ def import_employees(path: Path, *, dry_run: bool = False) -> int:
         try:
             create_employee(
                 personnel_number=row.personnel_number,
-                first_name=row.first_name,
-                last_name=row.last_name,
                 building_number=row.building_number,
                 department_number=row.department_number,
                 is_active=row.is_active,

@@ -97,8 +97,6 @@ class EmployeeSerializer(serializers.ModelSerializer):
 
 class EmployeeCreateSerializer(serializers.Serializer):
     personnel_number = serializers.CharField(max_length=32)
-    first_name = serializers.CharField(max_length=150, allow_blank=True, required=False)
-    last_name = serializers.CharField(max_length=150, allow_blank=True, required=False)
     building_number = serializers.CharField(max_length=32)
     department_number = serializers.CharField(max_length=32)
     is_active = serializers.BooleanField(default=True)
@@ -115,8 +113,6 @@ class EmployeeCreateSerializer(serializers.Serializer):
 
 class EmployeeUpdateSerializer(serializers.Serializer):
     personnel_number = serializers.CharField(max_length=32, required=False)
-    first_name = serializers.CharField(max_length=150, allow_blank=True, required=False)
-    last_name = serializers.CharField(max_length=150, allow_blank=True, required=False)
     building_number = serializers.CharField(max_length=32, required=False)
     department_number = serializers.CharField(max_length=32, required=False)
     is_active = serializers.BooleanField(required=False)

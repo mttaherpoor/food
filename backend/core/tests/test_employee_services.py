@@ -14,8 +14,6 @@ def test_create_employee_uses_personnel_number_for_username_and_password():
         personnel_number='001234',
         building_number='07',
         department_number='003',
-        first_name='Taher',
-        last_name='Poor',
     )
 
     assert employee.username == '001234'
@@ -24,6 +22,8 @@ def test_create_employee_uses_personnel_number_for_username_and_password():
     assert employee.profile.personnel_number == '001234'
     assert employee.profile.building_number == '07'
     assert employee.profile.department_number == '003'
+    assert employee.first_name == ''
+    assert employee.last_name == ''
     assert employee.groups.filter(name=EMPLOYEE_ROLE).exists()
 
 

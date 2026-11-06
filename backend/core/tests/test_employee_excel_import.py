@@ -16,8 +16,6 @@ def _save_employee_workbook(path, rows):
     sheet.append(
         [
             'personnel_number',
-            'first_name',
-            'last_name',
             'building_number',
             'department_number',
             'is_active',
@@ -34,8 +32,8 @@ def test_import_employees_creates_accounts_with_initial_password(tmp_path):
     _save_employee_workbook(
         path,
         [
-            ['001001', 'Ali', 'Ahmadi', '01', '100', True],
-            ['001002', 'Sara', 'Karimi', '02', '200', False],
+            ['001001', '01', '100', True],
+            ['001002', '02', '200', False],
         ],
     )
 
@@ -46,13 +44,15 @@ def test_import_employees_creates_accounts_with_initial_password(tmp_path):
     assert ali.check_password('001001')
     assert ali.must_change_password is True
     assert ali.profile.building_number == '01'
+    assert ali.first_name == ''
+    assert ali.last_name == ''
     assert sara.is_active is False
 
 
 @pytest.mark.django_db
 def test_import_employees_dry_run_does_not_write(tmp_path):
     path = tmp_path / 'employees.xlsx'
-    _save_employee_workbook(path, [['001001', 'Ali', 'Ahmadi', '01', '100', True]])
+    _save_employee_workbook(path, [['001001', '01', '100', True]])
 
     call_command('import_employees', path, dry_run=True, stdout=StringIO())
 
@@ -65,8 +65,8 @@ def test_import_employees_rejects_duplicate_rows_atomically(tmp_path):
     _save_employee_workbook(
         path,
         [
-            ['001001', 'Ali', 'Ahmadi', '01', '100', True],
-            ['001001', 'Sara', 'Karimi', '02', '200', True],
+            ['001001', '01', '100', True],
+            ['001001', '02', '200', True],
         ],
     )
 
