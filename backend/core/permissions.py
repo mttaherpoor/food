@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from core.roles import HR_FOOD_ROLE, VIEWER_ROLE
+from core.roles import EMPLOYEE_ROLE, HR_FOOD_ROLE, VIEWER_ROLE
 
 
 class HasChangedInitialPassword(BasePermission):
@@ -31,3 +31,18 @@ class IsHRFoodViewerOrSuperAdmin(BasePermission):
         if user.is_superuser or user.groups.filter(name=HR_FOOD_ROLE).exists():
             return True
         return bool(request.method in ('GET', 'HEAD', 'OPTIONS') and user.groups.filter(name=VIEWER_ROLE).exists())
+
+
+class IsCatalogReaderOrManager(BasePermission):
+    message = 'Only super administrators and hrFood members may modify the catalog.'
+
+    def has_permission(self, request, view) -> bool:
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser or user.groups.filter(name=HR_FOOD_ROLE).exists():
+            return True
+        return bool(
+            request.method in ('GET', 'HEAD', 'OPTIONS')
+            and user.groups.filter(name__in=(EMPLOYEE_ROLE, VIEWER_ROLE)).exists()
+        )

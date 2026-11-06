@@ -92,7 +92,7 @@ def test_catalog_rejects_negative_price(client):
 
 
 @pytest.mark.django_db
-def test_employee_cannot_access_catalog_management(client):
+def test_employee_can_read_catalog_but_cannot_manage_it(client):
     employee = create_employee(
         personnel_number='001234',
         building_number='07',
@@ -102,6 +102,11 @@ def test_employee_cannot_access_catalog_management(client):
     employee.save(update_fields=('must_change_password',))
     client.force_login(employee)
 
-    response = client.get(reverse('food-list'))
+    read_response = client.get(reverse('food-list'))
+    write_response = client.post(
+        reverse('food-list'),
+        {'name': 'New food', 'price': 10, 'container_price': 1},
+    )
 
-    assert response.status_code == 403
+    assert read_response.status_code == 200
+    assert write_response.status_code == 403

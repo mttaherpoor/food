@@ -9,7 +9,7 @@ from django.utils.dateparse import parse_date
 
 from typing import ClassVar
 
-from core.permissions import HasChangedInitialPassword, IsHRFoodViewerOrSuperAdmin
+from core.permissions import HasChangedInitialPassword, IsCatalogReaderOrManager, IsHRFoodViewerOrSuperAdmin
 from food.models import Drink, Food, Menu, Reservation, Side
 from food.reservation_serializers import (
     ReservationBatchInputSerializer,
@@ -34,7 +34,7 @@ class CatalogViewSet(
     permission_classes: ClassVar[list] = [
         IsAuthenticated,
         HasChangedInitialPassword,
-        IsHRFoodViewerOrSuperAdmin,
+        IsCatalogReaderOrManager,
     ]
 
 
