@@ -28,7 +28,7 @@ class DrinkAdmin(ModelAdmin):
 
 @admin.register(Menu)
 class MenuAdmin(ModelAdmin):
-    list_display = ('date', 'food', 'status', 'datetime_modified')
+    list_display = ('date', 'food', 'food_price', 'status', 'datetime_modified')
     list_filter = ('status', 'date')
     search_fields = ('food__name',)
     autocomplete_fields = ('food',)

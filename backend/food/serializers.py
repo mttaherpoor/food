@@ -40,6 +40,7 @@ class DrinkSerializer(serializers.ModelSerializer):
 
 class MenuSerializer(serializers.ModelSerializer):
     food_name = serializers.CharField(source='food.name', read_only=True)
+    food_price = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Menu
@@ -48,6 +49,7 @@ class MenuSerializer(serializers.ModelSerializer):
             'date',
             'food',
             'food_name',
+            'food_price',
             'status',
             'datetime_created',
             'datetime_modified',

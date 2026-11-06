@@ -1,4 +1,8 @@
+from django.conf import settings
 from django.db import models
+from django.db.models import Q
+
+from typing import ClassVar
 
 
 class TimestampedModel(models.Model):
@@ -61,11 +65,100 @@ class MenuStatus(models.TextChoices):
 class Menu(TimestampedModel):
     date = models.DateField()
     food = models.ForeignKey(Food, on_delete=models.PROTECT, related_name='menus')
+    food_price = models.PositiveBigIntegerField(
+        verbose_name='food price snapshot (Toman)',
+        null=True,
+        blank=True,
+    )
     status = models.CharField(
         max_length=3,
         choices=MenuStatus.choices,
         default=MenuStatus.AVAILABLE,
     )
 
+    class Meta:
+        constraints: ClassVar[list] = [models.UniqueConstraint(fields=('date',), name='unique_menu_per_date')]
+
     def __str__(self) -> str:
         return f'{self.date}: {self.food}'
+
+    def save(self, *args, **kwargs) -> None:
+        if self.food_price is None:
+            self.food_price = self.food.total_price
+        super().save(*args, **kwargs)
+
+
+class Reservation(TimestampedModel):
+    class Status(models.TextChoices):
+        RESERVED = 'res', 'Reserved'
+        CANCELLED = 'can', 'Cancelled'
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='reservations')
+    menu = models.ForeignKey(Menu, on_delete=models.PROTECT, related_name='reservations')
+    status = models.CharField(max_length=3, choices=Status.choices, default=Status.RESERVED)
+
+    class Meta:
+        constraints: ClassVar[list] = [
+            models.UniqueConstraint(fields=('user', 'menu'), name='unique_reservation_per_user_menu'),
+        ]
+        ordering = ('menu__date', 'user_id')
+
+    @property
+    def total_price(self) -> int:
+        if self.status == self.Status.CANCELLED:
+            return 0
+        current_item = self.items.filter(is_current=True, is_cancelled=False).first()
+        return current_item.total_price if current_item else 0
+
+    @property
+    def current_item(self):
+        return self.items.filter(is_current=True).first()
+
+    def __str__(self) -> str:
+        return f'{self.user} - {self.menu.date}'
+
+
+class ReservationItem(TimestampedModel):
+    reservation = models.ForeignKey(Reservation, on_delete=models.PROTECT, related_name='items')
+    side = models.ForeignKey(Side, on_delete=models.PROTECT, related_name='reservation_items', null=True, blank=True)
+    drink = models.ForeignKey(Drink, on_delete=models.PROTECT, related_name='reservation_items', null=True, blank=True)
+    food_price = models.PositiveBigIntegerField(verbose_name='food price snapshot (Toman)')
+    side_price = models.PositiveBigIntegerField(verbose_name='side price snapshot (Toman)', default=0)
+    drink_price = models.PositiveBigIntegerField(verbose_name='drink price snapshot (Toman)', default=0)
+    food_quantity = models.PositiveSmallIntegerField(default=1)
+    side_quantity = models.PositiveSmallIntegerField(default=0)
+    drink_quantity = models.PositiveSmallIntegerField(default=0)
+    is_current = models.BooleanField(default=True)
+    is_cancelled = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('reservation_id', '-datetime_created', '-pk')
+        constraints: ClassVar[list] = [
+            models.UniqueConstraint(
+                fields=('reservation',),
+                condition=Q(is_current=True),
+                name='unique_current_reservation_item',
+            ),
+            models.CheckConstraint(condition=Q(food_quantity__gte=1), name='reservation_food_quantity_positive'),
+            models.CheckConstraint(
+                condition=Q(side__isnull=False, side_quantity__gte=1) | Q(side__isnull=True, side_quantity=0),
+                name='reservation_side_selection_consistent',
+            ),
+            models.CheckConstraint(
+                condition=Q(drink__isnull=False, drink_quantity__gte=1) | Q(drink__isnull=True, drink_quantity=0),
+                name='reservation_drink_selection_consistent',
+            ),
+        ]
+
+    @property
+    def total_price(self) -> int:
+        if self.is_cancelled:
+            return 0
+        return (
+            self.food_price * self.food_quantity
+            + self.side_price * self.side_quantity
+            + self.drink_price * self.drink_quantity
+        )
+
+    def __str__(self) -> str:
+        return f'{self.reservation} (revision {self.pk})'
