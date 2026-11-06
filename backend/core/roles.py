@@ -27,3 +27,10 @@ HR_FOOD_FOOD_PERMISSIONS = (
     'change_menu',
     'view_menu',
 )
+
+VIEWER_FOOD_PERMISSIONS = (
+    'view_food',
+    'view_side',
+    'view_drink',
+    'view_menu',
+)

@@ -7,6 +7,7 @@ from core.roles import (
     HR_FOOD_FOOD_PERMISSIONS,
     HR_FOOD_ROLE,
     ROLE_NAMES,
+    VIEWER_FOOD_PERMISSIONS,
 )
 
 
@@ -24,3 +25,9 @@ def provision_roles(sender, **kwargs) -> None:
         codename__in=permission_map[sender.name],
     )
     groups[HR_FOOD_ROLE].permissions.add(*permissions)
+    if sender.name == 'food':
+        viewer_permissions = Permission.objects.filter(
+            content_type__app_label='food',
+            codename__in=VIEWER_FOOD_PERMISSIONS,
+        )
+        groups['Viewer'].permissions.add(*viewer_permissions)

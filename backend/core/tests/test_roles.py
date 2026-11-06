@@ -7,6 +7,7 @@ from core.roles import (
     HR_FOOD_CORE_PERMISSIONS,
     HR_FOOD_FOOD_PERMISSIONS,
     HR_FOOD_ROLE,
+    VIEWER_FOOD_PERMISSIONS,
     VIEWER_ROLE,
 )
 
@@ -36,3 +37,11 @@ def test_hr_food_receives_food_management_permissions():
     )
 
     assert permission_codes == set(HR_FOOD_FOOD_PERMISSIONS)
+
+
+@pytest.mark.django_db
+def test_viewer_receives_read_only_food_permissions():
+    viewer = Group.objects.get(name=VIEWER_ROLE)
+    permission_codes = set(viewer.permissions.filter(content_type__app_label='food').values_list('codename', flat=True))
+
+    assert permission_codes == set(VIEWER_FOOD_PERMISSIONS)

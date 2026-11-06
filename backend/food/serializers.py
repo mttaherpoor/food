@@ -55,3 +55,12 @@ class MenuSerializer(serializers.ModelSerializer):
             'datetime_modified',
         )
         read_only_fields = ('datetime_created', 'datetime_modified')
+
+
+class DailyReportSerializer(serializers.Serializer):
+    date = serializers.DateField(read_only=True)
+    food = serializers.CharField(read_only=True)
+    reserved_count = serializers.IntegerField(read_only=True)
+    cancelled_count = serializers.IntegerField(read_only=True)
+    food_quantity = serializers.IntegerField(read_only=True)
+    total_toman = serializers.IntegerField(read_only=True)

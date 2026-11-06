@@ -4,11 +4,12 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from django.db.models import BigIntegerField, Count, ExpressionWrapper, F, Q, Sum
 from django.utils.dateparse import parse_date
 
 from typing import ClassVar
 
-from core.permissions import HasChangedInitialPassword, IsHRFoodOrSuperAdmin
+from core.permissions import HasChangedInitialPassword, IsHRFoodViewerOrSuperAdmin
 from food.models import Drink, Food, Menu, Reservation, Side
 from food.reservation_serializers import (
     ReservationBatchInputSerializer,
@@ -17,7 +18,7 @@ from food.reservation_serializers import (
     WeeklyMenuSerializer,
 )
 from food.reservation_services import create_reservations, revise_reservation, weekly_menus
-from food.serializers import DrinkSerializer, FoodSerializer, MenuSerializer, SideSerializer
+from food.serializers import DailyReportSerializer, DrinkSerializer, FoodSerializer, MenuSerializer, SideSerializer
 
 RESERVATION_CUTOFF_HOUR = 10
 
@@ -33,7 +34,7 @@ class CatalogViewSet(
     permission_classes: ClassVar[list] = [
         IsAuthenticated,
         HasChangedInitialPassword,
-        IsHRFoodOrSuperAdmin,
+        IsHRFoodViewerOrSuperAdmin,
     ]
 
 
@@ -112,3 +113,73 @@ class ReservationViewSet(viewsets.ModelViewSet):
             cutoff_hour=RESERVATION_CUTOFF_HOUR,
         )
         return Response(self.get_serializer(self.get_object()).data)
+
+
+class DailyReportViewSet(viewsets.ViewSet):
+    permission_classes: ClassVar[list] = [
+        IsAuthenticated,
+        HasChangedInitialPassword,
+        IsHRFoodViewerOrSuperAdmin,
+    ]
+    queryset = Menu.objects.none()
+    serializer_class = DailyReportSerializer
+
+    def list(self, request):
+        start_date = parse_date(request.query_params.get('from', ''))
+        end_date = parse_date(request.query_params.get('to', ''))
+        if start_date is None or end_date is None:
+            raise ValidationError({'date_range': 'پارامترهای from و to با قالب YYYY-MM-DD الزامی‌اند.'})
+        if end_date < start_date:
+            raise ValidationError({'to': 'تاریخ پایان نباید قبل از تاریخ شروع باشد.'})
+
+        current_item_total = ExpressionWrapper(
+            F('reservations__items__food_price') * F('reservations__items__food_quantity')
+            + F('reservations__items__side_price') * F('reservations__items__side_quantity')
+            + F('reservations__items__drink_price') * F('reservations__items__drink_quantity'),
+            output_field=BigIntegerField(),
+        )
+        report_rows = (
+            Menu.objects.filter(date__range=(start_date, end_date))
+            .values('date', 'food__name')
+            .annotate(
+                reserved_count=Count(
+                    'reservations__id',
+                    filter=Q(reservations__status=Reservation.Status.RESERVED),
+                    distinct=True,
+                ),
+                cancelled_count=Count(
+                    'reservations__id',
+                    filter=Q(reservations__status=Reservation.Status.CANCELLED),
+                    distinct=True,
+                ),
+                total_toman=Sum(
+                    current_item_total,
+                    filter=Q(
+                        reservations__status=Reservation.Status.RESERVED,
+                        reservations__items__is_current=True,
+                        reservations__items__is_cancelled=False,
+                    ),
+                ),
+                food_quantity=Sum(
+                    'reservations__items__food_quantity',
+                    filter=Q(
+                        reservations__status=Reservation.Status.RESERVED,
+                        reservations__items__is_current=True,
+                        reservations__items__is_cancelled=False,
+                    ),
+                ),
+            )
+            .order_by('date')
+        )
+        data = [
+            {
+                'date': row['date'],
+                'food': row['food__name'],
+                'reserved_count': row['reserved_count'],
+                'cancelled_count': row['cancelled_count'],
+                'food_quantity': row['food_quantity'] or 0,
+                'total_toman': row['total_toman'] or 0,
+            }
+            for row in report_rows
+        ]
+        return Response(data)
