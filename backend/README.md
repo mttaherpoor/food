@@ -22,7 +22,7 @@ Validate the sample workbooks without changing the database:
 ```bash
 python manage.py import_employees sample_data/sample_employees.xlsx --dry-run
 python manage.py import_catalog sample_data/sample_catalog.xlsx --dry-run
-python manage.py import_monthly_menu <monthly-menu.xlsx> --dry-run
+python manage.py import_monthly_menu sample_data/sample_monthly_menu.xlsx --dry-run
 ```
 
 Remove `--dry-run` to import the records. Imports are create-only and atomic: an
@@ -33,11 +33,15 @@ changed at first sign-in.
 The employee workbook contains personnel number, building number, department
 number, and active status. Employee names are not imported.
 
-Monthly menu workbooks contain one `Menus` sheet with columns `date`, `food`,
-and `food_price_toman`. Dates may be Excel dates or `YYYY-MM-DD`; food names
-must already exist in the catalog. Prices are total prices billed for the meal
-in Toman, including the container. Duplicate dates in the workbook are rejected.
-Existing matching dates and prices are skipped so reimporting the same file is
-safe; a date with different food or price is rejected instead of overwriting
-menu history. Import is atomic and supports `--dry-run`.
+Monthly menu workbooks contain exactly three sheets: `Foods`, `Sides`, and
+`Drinks`. The `Foods` columns are `date`, `name`, `price_toman`,
+`container_price_toman`, and `special_container_price_toman`. Dates may be Excel
+dates or `YYYY-MM-DD`; food names must already exist in the food catalog. The
+menu price is the food price plus the higher of the two container prices. The
+`Sides` and `Drinks` sheets use `name` and `price_toman`; new options are added
+to the catalog and existing names with changed prices are rejected. Duplicate
+menu dates in the workbook are rejected. Existing matching menu dates and prices
+are left unchanged so reimporting the same file is safe; a date with different
+food or price is rejected instead of overwriting menu history. Import is atomic
+and supports `--dry-run`.
 
