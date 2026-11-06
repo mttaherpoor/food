@@ -24,7 +24,7 @@ dev = [
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"
 python_files = ["test_*.py", "*_test.py", "tests.py"]
-testpaths = ["tests"]
+testpaths = ["core/tests", "food/tests"]
 addopts = "--strict-markers --disable-warnings"
 
 [tool.ruff]
