@@ -80,8 +80,11 @@ class AuthViewSet(viewsets.GenericViewSet):
         auth_login(request, user)
         return Response(SessionUserSerializer(user).data)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def session(self, request):
+        if not request.user.is_authenticated:
+            return Response({'authenticated': False})
+
         return Response(self.get_serializer(request.user).data)
 
     @extend_schema(responses={200: SessionUserSerializer})

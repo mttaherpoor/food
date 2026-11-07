@@ -47,6 +47,7 @@ export type WeeklyMenu = {
   food_name: string
   food_price: number
   reservation: Reservation | null
+  can_reserve: boolean
 }
 
 export type DailyReport = {
@@ -112,7 +113,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const getCsrf = () => api<{ csrf_token: string }>('/auth/csrf')
-export const getSession = () => api<User>('/auth/session')
+export const getSession = () =>
+  api<User | { authenticated: false }>('/auth/session')
 export const logout = () => api<void>('/auth/logout', { method: 'POST', body: '{}' })
 
 export async function login(username: string, password: string): Promise<User> {

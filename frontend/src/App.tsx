@@ -103,8 +103,26 @@ export default function App() {
     getSession()
       .then((session) => {
         if (!alive) return
+
+        if ('authenticated' in session) {
+          setUser(null)
+
+          if (window.location.pathname !== '/login') {
+            setPendingPath(
+              window.location.pathname === '/'
+                ? '/reservations'
+                : window.location.pathname
+            )
+            window.history.replaceState({}, '', '/login')
+          }
+
+          return
+        }
+
         setUser(session)
+
         if (session.must_change_password) return
+
         if (window.location.pathname === '/login' || window.location.pathname === '/') {
           window.history.replaceState({}, '', '/reservations')
           setPage('week')
