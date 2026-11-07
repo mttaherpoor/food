@@ -216,3 +216,60 @@ def test_employee_must_change_initial_password_before_reserving(client):
     response = client.get(reverse('reservation-list'))
 
     assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_cancelled_reservation_can_be_reactivated_before_cutoff_without_losing_history(client):
+    user = create_employee_user('res-restore')
+    client.force_login(user)
+    food = Food.objects.create(name='Restore test', price=100_000, container_price=10_000)
+    menu = Menu.objects.create(date=date(2099, 1, 2), food=food)
+    created = client.post(
+        reverse('reservation-list'),
+        {'reservations': [{'menu': menu.pk, 'food_quantity': 1}]},
+        content_type='application/json',
+    )
+    assert created.status_code == 201
+    reservation_id = created.json()[0]['id']
+    cancelled = client.post(reverse('reservation-cancel', kwargs={'pk': reservation_id}))
+    assert cancelled.status_code == 200
+    restored = client.patch(
+        reverse('reservation-detail', kwargs={'pk': reservation_id}),
+        {'food_quantity': 2}, content_type='application/json',
+    )
+    assert restored.status_code == 200
+    reservation = Reservation.objects.get(pk=reservation_id)
+    assert reservation.status == Reservation.Status.RESERVED
+    assert reservation.items.count() == 3
+    assert reservation.items.filter(is_current=True, is_cancelled=False).count() == 1
+    assert reservation.current_item.food_quantity == 2
+    assert reservation.total_price == 220_000
+    assert Reservation.objects.filter(user=user, menu=menu).count() == 1
+    second_cancel = client.post(reverse('reservation-cancel', kwargs={'pk': reservation_id}))
+    assert second_cancel.status_code == 200
+    assert reservation.items.count() == 4
+
+
+@pytest.mark.django_db
+def test_cancelled_reservation_cannot_be_restored_after_cutoff(client, monkeypatch):
+    from zoneinfo import ZoneInfo
+    user = create_employee_user('res-expired')
+    client.force_login(user)
+    food = Food.objects.create(name='Expired restore', price=100_000, container_price=10_000)
+    menu = Menu.objects.create(date=date(2099, 1, 2), food=food)
+    created = client.post(
+        reverse('reservation-list'),
+        {'reservations': [{'menu': menu.pk}]}, content_type='application/json',
+    )
+    reservation_id = created.json()[0]['id']
+    assert client.post(reverse('reservation-cancel', kwargs={'pk': reservation_id})).status_code == 200
+    tehran_time = datetime(2099, 1, 1, 10, 0, tzinfo=ZoneInfo('Asia/Tehran'))
+    monkeypatch.setattr('food.services._tehran_now', lambda: tehran_time)
+    response = client.patch(
+        reverse('reservation-detail', kwargs={'pk': reservation_id}),
+        {'food_quantity': 1}, content_type='application/json',
+    )
+    assert response.status_code == 400
+    reservation = Reservation.objects.get(pk=reservation_id)
+    assert reservation.status == Reservation.Status.CANCELLED
+    assert reservation.items.count() == 2

@@ -88,8 +88,10 @@ def revise_reservation(
     previous = reservation.items.filter(is_current=True).first()
     if previous is None:
         raise ValidationError('برای این رزرو نسخه جاری وجود ندارد.')
-    if previous.is_cancelled:
+    if previous.is_cancelled and cancelled:
         raise ValidationError('این رزرو قبلاً لغو شده است.')
+    if previous.is_cancelled and reservation.menu.status != MenuStatus.AVAILABLE:
+        raise ValidationError({'menu': 'این منو برای رزرو مجدد در دسترس نیست.'})
     side = data.get('side', previous.side)
     drink = data.get('drink', previous.drink)
     side_quantity = data.get('side_quantity', previous.side_quantity)
@@ -124,8 +126,9 @@ def revise_reservation(
     if 'drink' in data and data['drink'] is None:
         revision_data['drink_quantity'] = 0
     _create_revision(reservation, revision_data, cancelled=cancelled)
-    if cancelled:
-        reservation.status = Reservation.Status.CANCELLED
+    new_status = Reservation.Status.CANCELLED if cancelled else Reservation.Status.RESERVED
+    if reservation.status != new_status:
+        reservation.status = new_status
         reservation.save(update_fields=('status', 'datetime_modified'))
     return reservation
 

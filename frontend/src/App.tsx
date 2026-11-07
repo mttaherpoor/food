@@ -420,7 +420,7 @@ function WeekPage() {
   const reservationCount = menus.filter((menu) => menu.reservation?.status === 'res').length
   const visibleDays = days.filter(({ menu }) => {
     if (filter === 'reserved') return menu?.reservation?.status === 'res'
-    if (filter === 'open') return menu && !menu.reservation
+    if (filter === 'open') return menu && menu.can_reserve && menu.reservation?.status !== 'res'
     return true
   })
 
@@ -473,7 +473,6 @@ function WeekPage() {
 
 function DayRow({ date, index, menu, onEdit }: { date: string; index: number; menu: WeeklyMenu | null; onEdit: () => void }) {
   const today = dateToIso(new Date()) === date
-  const isPast = new Date(`${date}T12:00:00`).getTime() < new Date(`${dateToIso(new Date())}T00:00:00`).getTime()
   const reservation = menu?.reservation ?? null
   const activeReservation = reservation?.status === 'res'
 
@@ -499,17 +498,17 @@ function DayRow({ date, index, menu, onEdit }: { date: string; index: number; me
           <span>لغو شده</span>
         </> : menu ? <>
           <span className="status-mark open-mark" />
-          <span>{isPast ? 'مهلت گذشته' : 'رزرو نشده'}</span>
+          <span>{menu.can_reserve ? 'رزرو نشده' : 'مهلت گذشته'}</span>
         </> : <span className="status-dash">—</span>}
       </div>
       <div className="day-action">
         {menu && (activeReservation
-          ? <button className="button button-secondary" onClick={onEdit} type="button">ویرایش / لغو</button>
-          : reservation?.status === 'can'
-            ? <span className="muted-action">در سوابق ثبت شد</span>
-            : isPast
-              ? <button className="button button-disabled" disabled type="button">مهلت تمام شده</button>
-              : <button className="button button-primary" onClick={onEdit} type="button"><Plus size={16} /> انتخاب غذا</button>)}
+          ? menu.can_reserve
+            ? <button className="button button-secondary" onClick={onEdit} type="button">ویرایش / لغو</button>
+            : <button className="button button-disabled" disabled type="button">مهلت تمام شده</button>
+          : menu.can_reserve
+            ? <button className="button button-primary" onClick={onEdit} type="button"><Plus size={16} /> {reservation?.status === 'can' ? 'رزرو مجدد' : 'انتخاب غذا'}</button>
+            : <button className="button button-disabled" disabled type="button">مهلت تمام شده</button>)}
       </div>
     </article>
   )
@@ -600,8 +599,8 @@ function ReservationDialog({
           {drink && <QuantityField label="تعداد نوشیدنی" value={drinkQuantity} onChange={setDrinkQuantity} />}
           <div className="dialog-total"><span>جمع این انتخاب</span><strong>{formatMoney(total)}</strong></div>
           {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="button button-primary submit-reservation" disabled={saving || canceling} type="submit">{saving ? 'در حال ثبت…' : menu.reservation ? 'ذخیرهٔ ویرایش' : 'ثبت رزرو'}</button>
-          {menu.reservation && <button className="button button-danger-quiet" disabled={saving || canceling} onClick={() => void cancelReservation()} type="button">{canceling ? 'در حال لغو…' : 'لغو غذای این روز'}</button>}
+          <button className="button button-primary submit-reservation" disabled={saving || canceling} type="submit">{saving ? 'در حال ثبت…' : menu.reservation?.status === 'can' ? 'ثبت رزرو مجدد' : menu.reservation ? 'ذخیرهٔ ویرایش' : 'ثبت رزرو'}</button>
+          {menu.reservation?.status === 'res' && <button className="button button-danger-quiet" disabled={saving || canceling} onClick={() => void cancelReservation()} type="button">{canceling ? 'در حال لغو…' : 'لغو غذای این روز'}</button>}
           <p className="cutoff-hint">مهلت رزرو و ویرایش تا ساعت ۱۰ صبح روز قبل است.</p>
         </form>}
       </section>
