@@ -118,7 +118,7 @@ def test_reservation_is_rejected_at_previous_day_cutoff(client, monkeypatch):
     food = Food.objects.create(name='Ghormeh sabzi', price=1_000_000, container_price=100_000)
     menu = Menu.objects.create(date=date(2099, 1, 2), food=food)
     now = timezone.make_aware(datetime(2099, 1, 1, 10, 0))
-    monkeypatch.setattr('food.reservation_services._tehran_now', lambda: now)
+    monkeypatch.setattr('food.services._tehran_now', lambda: now)
 
     response = client.post(
         reverse('reservation-list'),

@@ -11,14 +11,18 @@ from typing import ClassVar
 
 from core.permissions import HasChangedInitialPassword, IsCatalogReaderOrManager, IsHRFoodViewerOrSuperAdmin
 from food.models import Drink, Food, Menu, Reservation, Side
-from food.reservation_serializers import (
+from food.services import create_reservations, revise_reservation, weekly_menus
+from food.serializers import (
+    DailyReportSerializer,
+    DrinkSerializer,
+    FoodSerializer,
+    MenuSerializer,
     ReservationBatchInputSerializer,
     ReservationRevisionInputSerializer,
     ReservationSerializer,
+    SideSerializer,
     WeeklyMenuSerializer,
 )
-from food.reservation_services import create_reservations, revise_reservation, weekly_menus
-from food.serializers import DailyReportSerializer, DrinkSerializer, FoodSerializer, MenuSerializer, SideSerializer
 
 RESERVATION_CUTOFF_HOUR = 10
 
