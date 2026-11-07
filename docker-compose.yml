@@ -2,19 +2,25 @@ name: food-reservation
 
 services:
   frontend:
+    container_name: frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: development
     restart: unless-stopped
     ports:
-      - "8000:80"
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     networks:
       - shared_net
 
   db:
+    container_name: db
     image: postgres:17-bookworm
     restart: unless-stopped
     environment:
@@ -37,6 +43,7 @@ services:
       start_period: 10s
 
   backend:
+    container_name: backend
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -76,12 +83,21 @@ services:
       retries: 5
       start_period: 20s
 
+    ports:
+      - "8000:8000"
+
 volumes:
   postgres_data:
 
 networks:
   backend:
+    driver: bridge
+    name: food_reservation_internal
     internal: true
+    ipam:
+      config:
+        - subnet: 172.20.7.0/24
+
   shared_net:
     name: shared_net
     external: true
