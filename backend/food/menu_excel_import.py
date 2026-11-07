@@ -8,6 +8,7 @@ from pathlib import Path
 from openpyxl import load_workbook
 from openpyxl.cell.cell import Cell
 
+from food.jalali import parse_jalali_date
 from food.models import Drink, Food, Menu, Side
 
 MENU_SHEET = 'Foods'
@@ -50,11 +51,14 @@ def _cell_date(cell: Cell) -> date:
     if isinstance(cell.value, date):
         return cell.value
     if isinstance(cell.value, str):
+        text = cell.value.strip()
+        if '/' in text:
+            return parse_jalali_date(text)
         try:
-            return date.fromisoformat(cell.value.strip())
+            return date.fromisoformat(text)
         except ValueError as exc:
-            raise ValueError('date must be an Excel date or YYYY-MM-DD') from exc
-    raise ValueError('date must be an Excel date or YYYY-MM-DD')
+            raise ValueError('date must be an Excel date, Gregorian YYYY-MM-DD, or Jalali YYYY/MM/DD') from exc
+    raise ValueError('date must be an Excel date, Gregorian YYYY-MM-DD, or Jalali YYYY/MM/DD')
 
 
 def _cell_toman(cell: Cell) -> int:

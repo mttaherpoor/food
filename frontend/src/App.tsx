@@ -22,6 +22,7 @@ import {
   logout,
 } from './api'
 import type { CatalogItem, DailyReport, Reservation, User, WeeklyMenu } from './api'
+import JalaliDatePicker, { jalaliMonthStartISO } from './JalaliDatePicker'
 
 type Page = 'week' | 'history' | 'report' | 'catalog'
 type CatalogKind = 'foods' | 'sides' | 'drinks'
@@ -70,7 +71,7 @@ function dateToIso(date: Date) {
 
 function getWeekStart(date: Date) {
   const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+  start.setDate(start.getDate() - ((start.getDay() + 1) % 7))
   return start
 }
 
@@ -643,7 +644,7 @@ function HistoryPage() {
 
 function ReportPage() {
   const today = dateToIso(new Date())
-  const firstDay = `${today.slice(0, 8)}01`
+  const firstDay = jalaliMonthStartISO(today)
   const [fromDate, setFromDate] = useState(firstDay)
   const [toDate, setToDate] = useState(today)
   const [rows, setRows] = useState<DailyReport[]>([])
@@ -669,12 +670,30 @@ function ReportPage() {
 
   useEffect(() => { void loadReport() }, [])
 
+  async function downloadReport() {
+    setError('')
+    try {
+      const response = await fetch(`/api/v1/reports/daily/export?from=${fromDate}&to=${toDate}`, { credentials: 'same-origin' })
+      if (!response.ok) throw new Error(`خطای دریافت فایل Excel (${response.status})`)
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'food-daily-report-jalali.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+    } catch (downloadError) { setError(getApiMessage(downloadError)) }
+  }
+
   return <section className="page-section" aria-labelledby="report-title">
     <div className="page-heading"><div><p className="eyebrow">گزارش مدیریتی</p><h1 id="report-title">گزارش روزانهٔ رزرو</h1><p className="page-subtitle">تعداد غذا و مبلغ رزروهای فعال را بر اساس تاریخ ببین.</p></div></div>
     <form className="report-filters" onSubmit={(event) => void loadReport(event)}>
-      <label className="field-label">از تاریخ<input onChange={(event) => setFromDate(event.target.value)} required type="date" value={fromDate} /></label>
-      <label className="field-label">تا تاریخ<input onChange={(event) => setToDate(event.target.value)} required type="date" value={toDate} /></label>
+      <label className="field-label">از تاریخ<JalaliDatePicker onChange={setFromDate} required value={fromDate} /></label>
+      <label className="field-label">تا تاریخ<JalaliDatePicker onChange={setToDate} required value={toDate} /></label>
       <button className="button button-primary" disabled={loading} type="submit">{loading ? 'در حال دریافت…' : 'نمایش گزارش'}</button>
+      <button className="button" onClick={() => void downloadReport()} type="button">خروجی Excel (شمسی)</button>
     </form>
     {error && <ErrorMessage message={error} onRetry={() => void loadReport()} />}
     {loaded && !error && <>
@@ -763,7 +782,7 @@ function CatalogPage() {
     {notice && <p className="form-success" role="status">{notice}</p>}
     {error && <ErrorMessage message={error} />}
     {loading ? <LoadingRows /> : <div className="management-layout">
-      <section className="management-block"><h2>ثبت منوی روز</h2><form className="management-form" onSubmit={(event) => void createMenu(event)}><label className="field-label">تاریخ<input onChange={(event) => setMenuDate(event.target.value)} required type="date" value={menuDate} /></label><label className="field-label">غذای روز<select onChange={(event) => setSelectedFood(event.target.value)} required value={selectedFood}>{foods.map((food) => <option key={food.id} value={food.id}>{food.name} · {formatMoney(food.total_price)}</option>)}</select></label><button className="button button-primary" disabled={!foods.length} type="submit">ثبت منو</button></form></section>
+      <section className="management-block"><h2>ثبت منوی روز</h2><form className="management-form" onSubmit={(event) => void createMenu(event)}><label className="field-label">تاریخ<JalaliDatePicker onChange={setMenuDate} required value={menuDate} /></label><label className="field-label">غذای روز<select onChange={(event) => setSelectedFood(event.target.value)} required value={selectedFood}>{foods.map((food) => <option key={food.id} value={food.id}>{food.name} · {formatMoney(food.total_price)}</option>)}</select></label><button className="button button-primary" disabled={!foods.length} type="submit">ثبت منو</button></form></section>
       <section className="management-block"><h2>افزودن غذا</h2><form className="management-form two-columns" onSubmit={(event) => void createFood(event)}><label className="field-label span-two">نام غذا<input onChange={(event) => setFoodName(event.target.value)} required value={foodName} /></label><label className="field-label">قیمت غذا (تومان)<input min={0} onChange={(event) => setFoodPrice(event.target.value)} required type="number" value={foodPrice} /></label><label className="field-label">قیمت ظرف (تومان)<input min={0} onChange={(event) => setContainerPrice(event.target.value)} required type="number" value={containerPrice} /></label><button className="button button-primary span-two" type="submit">افزودن غذا</button></form></section>
       <section className="management-block"><h2>افزودن گزینهٔ جانبی</h2><form className="management-form two-columns" onSubmit={(event) => void createCatalogItem(event)}><label className="field-label">نوع گزینه<select onChange={(event) => setKind(event.target.value as CatalogKind)} value={kind}><option value="sides">ساید</option><option value="drinks">نوشیدنی</option></select></label><label className="field-label">نام<input onChange={(event) => setItemName(event.target.value)} required value={itemName} /></label><label className="field-label span-two">قیمت (تومان)<input min={0} onChange={(event) => setItemPrice(event.target.value)} required type="number" value={itemPrice} /></label><button className="button button-primary span-two" type="submit">افزودن گزینه</button></form></section>
       <CatalogSummary foods={foods} sides={sides} drinks={drinks} />

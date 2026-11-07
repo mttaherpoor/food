@@ -5,11 +5,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from django.db.models import BigIntegerField, Count, ExpressionWrapper, F, Q, Sum
+from django.http import HttpResponse
 from django.utils.dateparse import parse_date
 
 from typing import ClassVar
+from io import BytesIO
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
 
 from core.permissions import HasChangedInitialPassword, IsCatalogReaderOrManager, IsHRFoodViewerOrSuperAdmin
+from food.jalali import format_jalali_date
 from food.models import Drink, Food, Menu, Reservation, Side
 from food.services import create_reservations, revise_reservation, weekly_menus
 from food.serializers import (
@@ -128,7 +134,7 @@ class DailyReportViewSet(viewsets.ViewSet):
     queryset = Menu.objects.none()
     serializer_class = DailyReportSerializer
 
-    def list(self, request):
+    def _report_data(self, request):
         start_date = parse_date(request.query_params.get('from', ''))
         end_date = parse_date(request.query_params.get('to', ''))
         if start_date is None or end_date is None:
@@ -186,4 +192,43 @@ class DailyReportViewSet(viewsets.ViewSet):
             }
             for row in report_rows
         ]
-        return Response(data)
+        return data
+
+    def list(self, request):
+        return Response(self._report_data(request))
+
+    @action(detail=False, methods=['get'], url_path='export')
+    def export(self, request):
+        """Export the same authorized report as XLSX with Jalali date text."""
+        data = self._report_data(request)
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = 'گزارش روزانه'
+        sheet.sheet_view.rightToLeft = True
+        headers = ['تاریخ شمسی', 'غذا', 'تعداد رزرو', 'تعداد لغو', 'تعداد غذا', 'جمع (تومان)']
+        sheet.append(headers)
+        for row in data:
+            sheet.append([
+                format_jalali_date(row['date']), row['food'], row['reserved_count'],
+                row['cancelled_count'], row['food_quantity'], row['total_toman'],
+            ])
+        sheet.freeze_panes = 'A2'
+        sheet.auto_filter.ref = sheet.dimensions
+        for cell in sheet[1]:
+            cell.font = Font(bold=True, color='FFFFFF')
+            cell.fill = PatternFill('solid', fgColor='206C80')
+            cell.alignment = Alignment(horizontal='center')
+        for column, width in {'A': 18, 'B': 30, 'C': 16, 'D': 16, 'E': 16, 'F': 22}.items():
+            sheet.column_dimensions[column].width = width
+        for row in sheet.iter_rows(min_row=2):
+            row[0].number_format = '@'
+            for cell in row[2:]:
+                cell.number_format = '#,##0'
+        output = BytesIO()
+        workbook.save(output)
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename="food-daily-report-jalali.xlsx"'
+        return response
