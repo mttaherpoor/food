@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 
 // Intl uses the Persian calendar for display; selected values remain ISO Gregorian for the Django API.
 const numeric = new Intl.DateTimeFormat('en-US-u-ca-persian-nu-latn', {
@@ -60,10 +60,17 @@ type Props = {
 
 export default function JalaliDatePicker({ id, value, onChange, required, disabled }: Props) {
   const [isOpen, setOpen] = useState(false)
-  const [visibleMonth, setVisibleMonth] = useState(() => monthStart(fromIso(value)))
+  const [requiredError, setRequiredError] = useState(false)
+  const requiredErrorId = useId()
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [visibleMonth, setVisibleMonth] = useState(() => monthStart(fromIso(value || localTodayISO())))
   const container = useRef<HTMLDivElement>(null)
+  const pendingFocusDate = useRef<string | null>(null)
   useEffect(() => {
-    if (value) setVisibleMonth(monthStart(fromIso(value)))
+    if (value) {
+      setVisibleMonth(monthStart(fromIso(value)))
+      setRequiredError(false)
+    }
   }, [value])
   useEffect(() => {
     if (!isOpen) return
@@ -78,32 +85,109 @@ export default function JalaliDatePicker({ id, value, onChange, required, disabl
     return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown) }
   }, [isOpen])
 
+
+  useEffect(() => {
+    const targetIso = pendingFocusDate.current
+    if (!targetIso) return
+
+    const target = container.current?.querySelector<HTMLButtonElement>(
+      `button[data-iso="${targetIso}"]`
+    )
+
+    if (target) {
+      target.focus()
+      pendingFocusDate.current = null
+    }
+  }, [visibleMonth])
+
+  function handleDayKeyDown(
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    dayDate: Date
+  ) {
+    const offsets: Record<string, number> = {
+      ArrowLeft: 1,
+      ArrowRight: -1,
+      ArrowUp: -7,
+      ArrowDown: 7,
+    }
+
+    const offset = offsets[event.key]
+    if (offset === undefined) return
+
+    event.preventDefault()
+
+    const targetDate = plusDays(dayDate, offset)
+    const targetIso = iso(targetDate)
+    const current = parts(visibleMonth)
+    const target = parts(targetDate)
+
+    if (
+      current.year === target.year &&
+      current.month === target.month
+    ) {
+      container.current
+        ?.querySelector<HTMLButtonElement>(
+          `button[data-iso="${targetIso}"]`
+        )
+        ?.focus()
+      return
+    }
+
+    pendingFocusDate.current = targetIso
+    setVisibleMonth(monthStart(targetDate))
+  }
+
   const start = monthStart(visibleMonth)
   const { year, month } = parts(start)
   const offset = (start.getUTCDay() + 1) % 7 // Saturday first
   const end = nextMonth(start)
   const count = Math.round((end.getTime() - start.getTime()) / 86400000)
-  return <div className="jalali-picker" ref={container}>
-    <button aria-expanded={isOpen} aria-haspopup="dialog" className="jalali-input" disabled={disabled} id={id} onClick={() => setOpen(!isOpen)} type="button">
+  return <div className="relative min-w-[180px]" ref={container}>
+    <button aria-expanded={isOpen} aria-haspopup="dialog" aria-required={required || undefined} aria-invalid={requiredError || undefined} aria-describedby={requiredError ? requiredErrorId : undefined} ref={triggerRef} className="flex min-h-[46px] w-full cursor-pointer items-center justify-between rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" disabled={disabled} id={id} onClick={() => setOpen(!isOpen)} type="button">
       <span>{value ? displayJalaliISO(value) : 'انتخاب تاریخ'}</span><span aria-hidden="true">▦</span>
     </button>
-    {required && <input aria-hidden="true" readOnly required tabIndex={-1} value={value} className="jalali-required" />}
-    {isOpen && <div aria-label="تقویم شمسی" className="jalali-calendar" dir="rtl" role="dialog">
-      <div className="jalali-calendar-nav">
-        <button aria-label="ماه قبل" onClick={() => setVisibleMonth(previousMonth(start))} type="button">‹</button>
+    {required && (
+      <input
+        aria-hidden="true"
+        className="pointer-events-none absolute h-px w-px opacity-0"
+        disabled={disabled}
+        onChange={() => {}}
+        onInvalid={(event) => {
+          event.preventDefault()
+          setRequiredError(true)
+          triggerRef.current?.focus()
+        }}
+        required
+        tabIndex={-1}
+        type="text"
+        value={value}
+      />
+    )}
+    {requiredError && required && !disabled && (
+      <p
+        className="mt-2 mb-0 text-xs text-negative"
+        id={requiredErrorId}
+        role="alert"
+      >
+        انتخاب تاریخ الزامی است.
+      </p>
+    )}
+    {isOpen && <div aria-label="تقویم شمسی" className="absolute top-[calc(100%+5px)] right-0 z-30 w-[292px] max-w-[calc(100vw-32px)] rounded-xl border border-[#d9dfe2] bg-white p-3 shadow-[0_12px_36px_#1b3c4a22]" dir="rtl" role="dialog">
+      <div className="mb-2 flex items-center justify-between">
+        <button aria-label="ماه قبل" className="min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent text-ink h-[34px] w-[34px] text-2xl hover:bg-[#e5f2f4]" onClick={() => setVisibleMonth(previousMonth(start))} type="button">‹</button>
         <strong>{monthNames[month - 1]} {fa(year)}</strong>
-        <button aria-label="ماه بعد" onClick={() => setVisibleMonth(nextMonth(start))} type="button">›</button>
+        <button aria-label="ماه بعد" className="min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent text-ink h-[34px] w-[34px] text-2xl hover:bg-[#e5f2f4]" onClick={() => setVisibleMonth(nextMonth(start))} type="button">›</button>
       </div>
-      <div className="jalali-calendar-grid">
-        {weekdays.map((d, index) => <span className="jalali-weekday" key={index}>{d}</span>)}
+      <div className="grid grid-cols-7 items-center gap-[2px] text-center">
+        {weekdays.map((d, index) => <span className="py-2 text-xs text-[#65727b]" key={index}>{d}</span>)}
         {Array.from({ length: offset }, (_, i) => <span key={`blank-${i}`} />)}
         {Array.from({ length: count }, (_, i) => {
           const dayDate = plusDays(start, i)
           const dayIso = iso(dayDate)
-          return <button aria-label={`${fa(i + 1)} ${monthNames[month - 1]} ${fa(year)}`} aria-pressed={dayIso === value} className={dayIso === value ? 'selected' : ''} key={dayIso} onClick={() => { onChange(dayIso); setOpen(false) }} type="button">{fa(i + 1)}</button>
+          return <button aria-label={`${fa(i + 1)} ${monthNames[month - 1]} ${fa(year)}`} aria-pressed={dayIso === value} className={`min-h-[34px] cursor-pointer rounded-[7px] border-0 ${dayIso === value ? 'bg-[#206c80] text-white' : 'bg-transparent text-ink hover:bg-[#e5f2f4]'}`} data-iso={dayIso} key={dayIso} onKeyDown={(event) => handleDayKeyDown(event, dayDate)} onClick={() => { onChange(dayIso); setOpen(false) }} type="button">{fa(i + 1)}</button>
         })}
       </div>
-      <button className="jalali-today" onClick={() => { onChange(localTodayISO()); setOpen(false) }} type="button">امروز</button>
+      <button className="mt-[6px] min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent px-[10px] py-1 text-[#206c80]" onClick={() => { onChange(localTodayISO()); setOpen(false) }} type="button">امروز</button>
     </div>}
   </div>
 }
