@@ -22,3 +22,10 @@ export function addDays(date: Date, count: number) {
   result.setDate(result.getDate() + count)
   return result
 }
+
+
+export function formatWeekday(date: string) {
+  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+    weekday: 'long',
+  }).format(new Date(`${date}T12:00:00`))
+}

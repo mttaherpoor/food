@@ -14,7 +14,7 @@ import EmptyState from '../components/ui/EmptyState'
 import ErrorMessage from '../components/ui/ErrorMessage'
 import LoadingRows from '../components/ui/LoadingRows'
 import { buttonClass, iconButtonClass, textButtonClass } from '../components/ui/buttonStyles'
-import { addDays, dateToIso, formatDate, getWeekStart } from '../utils/date'
+import { addDays, dateToIso, formatDate, formatWeekday, getWeekStart } from '../utils/date'
 import { getApiMessage } from '../utils/errors'
 import { formatMoney } from '../utils/format'
 
@@ -91,7 +91,7 @@ export default function WeekPage() {
         <div>
           <p className="mt-0 mb-2 text-xs font-bold text-accent">برنامهٔ هفتگی</p>
           <h1 id="week-title">غذای هفته</h1>
-          <p className="mt-[7px] mb-0 text-sm leading-[1.7] text-muted max-[680px]:max-w-[440px] max-[680px]:text-xs">هر روز یک غذا برای انتخاب؛ ساید و نوشیدنی اختیاری است.</p>
+          <p className="mt-[7px] mb-0 text-sm leading-[1.7] text-muted max-[680px]:max-w-[440px] max-[680px]:text-xs">هر روز یک غذا برای انتخاب؛ پیش‌غذا و نوشیدنی اختیاری است.</p>
         </div>
         <button
           aria-label="تازه‌سازی برنامه هفتگی"
@@ -106,9 +106,9 @@ export default function WeekPage() {
 
       <div className="flex min-h-[58px] items-center justify-between gap-[14px] border-y border-line py-2 max-[680px]:flex-col-reverse max-[680px]:items-start max-[680px]:gap-[5px] max-[680px]:py-[10px]">
         <div className="flex items-center gap-[9px] max-[680px]:w-full max-[680px]:justify-between max-[680px]:gap-[3px]">
-          <button aria-label="هفتهٔ بعد" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, 7))} type="button"><ChevronRight size={18} /></button>
+          <button aria-label="هفتهٔ قبل" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, -7))} type="button"><ChevronRight size={18} /></button>
           <strong className="whitespace-nowrap text-sm max-[680px]:text-xs">{formatDate(startIso, { weekday: undefined })} <span className="mx-1 font-normal text-[#899094]">تا</span> {formatDate(dateToIso(addDays(weekStart, 5)), { weekday: undefined })}</strong>
-          <button aria-label="هفتهٔ قبل" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, -7))} type="button"><ChevronLeft size={18} /></button>
+          <button aria-label="هفتهٔ بعد" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, 7))} type="button"><ChevronLeft size={18} /></button>
           <button className={`${textButtonClass} text-accent!`} onClick={() => setWeekStart(getWeekStart(new Date()))} type="button">برو به هفته جاری</button>
         </div>
         <div className="flex items-baseline gap-[7px] text-xs text-muted max-[680px]:self-start"><strong className="text-xl text-accent">{new Intl.NumberFormat('fa-IR').format(reservationCount)}</strong><span>رزرو فعال</span></div>
@@ -148,7 +148,7 @@ function DayRow({ date, index, menu, onEdit }: { date: string; index: number; me
   return (
     <article className={`grid min-h-[84px] grid-cols-[minmax(120px,0.8fr)_minmax(190px,1.55fr)_minmax(100px,0.7fr)_minmax(120px,auto)] items-center gap-[18px] border-b border-line px-1 py-[13px] max-[900px]:grid-cols-[minmax(105px,0.7fr)_minmax(160px,1.3fr)_minmax(85px,0.6fr)_auto] max-[900px]:gap-[10px] max-[680px]:grid-cols-[minmax(0,1fr)_auto] max-[680px]:gap-x-3 max-[680px]:gap-y-2 max-[680px]:px-[2px] max-[680px]:py-[14px] ${today ? "relative before:absolute before:inset-y-[15px] before:start-[-10px] before:w-[3px] before:rounded-[3px] before:bg-accent before:content-['']" : ""}${index > 4 ? " weekend" : ""}`}>
       <div className="flex min-w-0 flex-col gap-1 max-[680px]:col-start-1 max-[680px]:row-start-1 max-[680px]:flex-row max-[680px]:flex-wrap max-[680px]:items-baseline max-[680px]:gap-x-2">
-        <strong className="text-sm max-[680px]:text-[13px]">{formatDate(date, { weekday: 'long' })}</strong>
+        <strong className="text-sm max-[680px]:text-[13px]">{formatWeekday(date)}</strong>
         <span className="text-xs text-muted max-[680px]:text-[11px]">{formatDate(date, { weekday: undefined, month: 'short' })}</span>
         {today && <span className="mt-[2px] self-start text-[11px] font-semibold text-accent max-[680px]:mt-0">امروز</span>}
       </div>
