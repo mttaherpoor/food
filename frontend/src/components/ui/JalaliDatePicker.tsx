@@ -172,7 +172,7 @@ export default function JalaliDatePicker({ id, value, onChange, required, disabl
         انتخاب تاریخ الزامی است.
       </p>
     )}
-    {isOpen && <div aria-label="تقویم شمسی" className="absolute top-[calc(100%+5px)] right-0 z-30 w-[292px] max-w-[calc(100vw-32px)] rounded-xl border border-[#d9dfe2] bg-white p-3 shadow-[0_12px_36px_#1b3c4a22]" dir="rtl" role="dialog">
+    {isOpen && <div aria-label="تقویم شمسی" className="fixed inset-x-4 top-1/2 z-[100] mx-auto max-h-[calc(100dvh-110px)] w-auto max-w-[360px] -translate-y-1/2 overflow-y-auto rounded-xl border border-[#d9dfe2] bg-white p-3 shadow-[0_12px_36px_#1b3c4a22] sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+5px)] sm:mx-0 sm:max-h-none sm:w-[292px] sm:max-w-[calc(100vw-32px)] sm:translate-y-0 sm:overflow-visible" dir="rtl" role="dialog">
       <div className="mb-2 flex items-center justify-between">
         <button aria-label="ماه قبل" className="min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent text-ink h-[34px] w-[34px] text-2xl hover:bg-[#e5f2f4]" onClick={() => setVisibleMonth(previousMonth(start))} type="button">‹</button>
         <strong>{monthNames[month - 1]} {fa(year)}</strong>
