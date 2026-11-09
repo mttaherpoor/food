@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   Navigate,
   Route,
@@ -15,11 +15,15 @@ import type { User } from './api/types'
 import MainShell from './components/layout/MainShell'
 import LoginScreen from './pages/LoginPage'
 import PasswordScreen from './pages/PasswordPage'
-import WeekPage from './pages/WeekPage'
-import HistoryPage from './pages/HistoryPage'
-import ReportPage from './pages/ReportPage'
-import CatalogPage from './pages/CatalogPage'
 import { getApiMessage } from './utils/errors'
+
+const WeekPage = lazy(() => import('./pages/WeekPage'))
+
+const HistoryPage = lazy(() => import('./pages/HistoryPage'))
+
+const ReportPage = lazy(() => import('./pages/ReportPage'))
+
+const CatalogPage = lazy(() => import('./pages/CatalogPage'))
 
 function normalizePath(path: string): string {
   return path.replace(/\/+$/, '') || '/'
@@ -271,7 +275,18 @@ export default function App() {
       onNavigate={(page) => navigate(routeFor(page))}
       onLogout={handleLogout}
     >
-      <Routes>
+      <Suspense
+        fallback={
+          <div
+            role="status"
+            aria-live="polite"
+            className="grid min-h-[220px] place-items-center rounded-xl border border-line bg-white p-6 text-sm text-muted"
+          >
+            در حال بارگذاری صفحه…
+          </div>
+        }
+      >
+        <Routes>
         <Route path="/reservations" element={<WeekPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route
@@ -290,7 +305,8 @@ export default function App() {
           path="*"
           element={<Navigate to="/reservations" replace />}
         />
-      </Routes>
+        </Routes>
+      </Suspense>
     </MainShell>
   )
 }
