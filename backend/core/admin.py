@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 
 from unfold.admin import ModelAdmin
 
-from core.models import CustomUser, Profile
+from core.models import Building, CustomUser, Department, Profile
 
 
 @admin.register(CustomUser)
@@ -21,3 +21,22 @@ class ProfileAdmin(ModelAdmin):
     )
     search_fields = ('personnel_number',)
     list_select_related = ('user',)
+
+
+
+@admin.register(Building)
+class BuildingAdmin(ModelAdmin):
+    list_display = ('number', 'is_active')
+    list_display_links = ('number',)
+    list_filter = ('is_active',)
+    search_fields = ('number',)
+    ordering = ('number',)
+
+
+@admin.register(Department)
+class DepartmentAdmin(ModelAdmin):
+    list_display = ('number', 'is_active')
+    list_display_links = ('number',)
+    list_filter = ('is_active',)
+    search_fields = ('number',)
+    ordering = ('number',)
