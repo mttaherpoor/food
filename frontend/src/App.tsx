@@ -91,6 +91,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null)
   const [booting, setBooting] = useState(true)
   const [loginError, setLoginError] = useState('')
+  const [logoutError, setLogoutError] = useState('')
 
   const [pendingPath, setPendingPath] = useState(() => {
     const path = normalizePath(location.pathname)
@@ -168,22 +169,24 @@ export default function App() {
   }
 
   async function handleLogout() {
+    setLogoutError('')
+
     try {
       await logout()
-    } finally {
-      const path = normalizePath(location.pathname)
-
-      setPendingPath(
-        path === '/login' ? pendingPath : path
+    } catch (error) {
+      setLogoutError(
+        `خروج از حساب انجام نشد. ${getApiMessage(error)}`
       )
-      setUser(null)
-      setLoginError('')
-
-      navigate(
-        loginDestination(path === '/login' ? pendingPath : path),
-        { replace: true }
-      )
+      return
     }
+
+    const path = normalizePath(location.pathname)
+    const destination = path === '/login' ? pendingPath : path
+
+    setPendingPath(destination)
+    setUser(null)
+    setLoginError('')
+    navigate(loginDestination(destination), { replace: true })
   }
 
   if (booting) {
@@ -253,6 +256,14 @@ export default function App() {
       onNavigate={(page) => navigate(routeFor(page))}
       onLogout={handleLogout}
     >
+      {logoutError && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          {logoutError}
+        </p>
+      )}
       <Suspense
         fallback={
           <div

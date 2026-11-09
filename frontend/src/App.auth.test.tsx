@@ -140,6 +140,68 @@ describe('Authentication and routing', () => {
     expect(window.location.pathname).toBe('/reservations')
   })
 
+  it('keeps the user signed in when logout fails and allows retry', async () => {
+    const user = userEvent.setup()
+    let logoutAttempts = 0
+
+    server.use(
+      http.get('*/api/v1/auth/session', () =>
+        HttpResponse.json(employee)
+      ),
+      http.post('*/api/v1/auth/logout', () => {
+        logoutAttempts += 1
+
+        if (logoutAttempts === 1) {
+          return HttpResponse.json(
+            { detail: 'خطای موقت سرور' },
+            { status: 500 }
+          )
+        }
+
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+
+    renderAt('/history')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'صفحه سوابق آزمایشی',
+      })
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getAllByRole('button', {
+        name: 'خروج از حساب',
+      })[0]
+    )
+
+    expect(
+      await screen.findByRole('alert')
+    ).toHaveTextContent('خروج از حساب انجام نشد.')
+
+    expect(window.location.pathname).toBe('/history')
+    expect(logoutAttempts).toBe(1)
+
+    await user.click(
+      screen.getAllByRole('button', {
+        name: 'خروج از حساب',
+      })[0]
+    )
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/login')
+    })
+
+    expect(logoutAttempts).toBe(2)
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'ورود به حساب',
+      })
+    ).toBeInTheDocument()
+  })
+
   it('logs out and redirects to login', async () => {
     const user = userEvent.setup()
     let authenticated = true
