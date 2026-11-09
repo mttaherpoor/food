@@ -1,5 +1,5 @@
 import { ChevronLeft } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent } from 'react'
 import BrandMark from '../components/layout/BrandMark'
 import { getApiMessage } from '../utils/errors'
@@ -13,10 +13,9 @@ export default function LoginScreen({
 }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(initialError)
+  const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => setError(initialError), [initialError])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -67,7 +66,7 @@ export default function LoginScreen({
             type="password"
             value={password}
           />
-          {error && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a]" role="alert">{error}</p>}
+          {(error || initialError) && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a]" role="alert">{error || initialError}</p>}
           <button className="inline-flex min-h-12 items-center justify-center gap-2 rounded-[9px] border border-transparent bg-accent px-[14px] py-[9px] text-sm font-semibold text-white! cursor-pointer transition-colors duration-150 hover:not-disabled:bg-[#145769] disabled:cursor-not-allowed disabled:opacity-55" disabled={busy} type="submit">
             {busy ? 'در حال ورود…' : 'ورود'}
             {!busy && <ChevronLeft aria-hidden="true" size={18} />}

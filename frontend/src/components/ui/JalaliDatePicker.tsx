@@ -67,12 +67,6 @@ export default function JalaliDatePicker({ id, value, onChange, required, disabl
   const container = useRef<HTMLDivElement>(null)
   const pendingFocusDate = useRef<string | null>(null)
   useEffect(() => {
-    if (value) {
-      setVisibleMonth(monthStart(fromIso(value)))
-      setRequiredError(false)
-    }
-  }, [value])
-  useEffect(() => {
     if (!isOpen) return
     function onPointerDown(event: PointerEvent) {
       if (container.current && !container.current.contains(event.target as Node)) setOpen(false)
@@ -143,7 +137,13 @@ export default function JalaliDatePicker({ id, value, onChange, required, disabl
   const end = nextMonth(start)
   const count = Math.round((end.getTime() - start.getTime()) / 86400000)
   return <div className="relative min-w-[180px]" ref={container}>
-    <button aria-expanded={isOpen} aria-haspopup="dialog" aria-required={required || undefined} aria-invalid={requiredError || undefined} aria-describedby={requiredError ? requiredErrorId : undefined} ref={triggerRef} className="flex min-h-[46px] w-full cursor-pointer items-center justify-between rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" disabled={disabled} id={id} onClick={() => setOpen(!isOpen)} type="button">
+    <button aria-expanded={isOpen} aria-haspopup="dialog" aria-describedby={requiredError ? requiredErrorId : undefined} ref={triggerRef} className="flex min-h-[46px] w-full cursor-pointer items-center justify-between rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" disabled={disabled} id={id} onClick={() => {
+      if (!isOpen) {
+        setVisibleMonth(monthStart(fromIso(value || localTodayISO())))
+        setRequiredError(false)
+      }
+      setOpen(!isOpen)
+    }} type="button">
       <span>{value ? displayJalaliISO(value) : 'انتخاب تاریخ'}</span><span aria-hidden="true">▦</span>
     </button>
     {required && (
@@ -184,10 +184,10 @@ export default function JalaliDatePicker({ id, value, onChange, required, disabl
         {Array.from({ length: count }, (_, i) => {
           const dayDate = plusDays(start, i)
           const dayIso = iso(dayDate)
-          return <button aria-label={`${fa(i + 1)} ${monthNames[month - 1]} ${fa(year)}`} aria-pressed={dayIso === value} className={`min-h-[34px] cursor-pointer rounded-[7px] border-0 ${dayIso === value ? 'bg-[#206c80] text-white' : 'bg-transparent text-ink hover:bg-[#e5f2f4]'}`} data-iso={dayIso} key={dayIso} onKeyDown={(event) => handleDayKeyDown(event, dayDate)} onClick={() => { onChange(dayIso); setOpen(false) }} type="button">{fa(i + 1)}</button>
+          return <button aria-label={`${fa(i + 1)} ${monthNames[month - 1]} ${fa(year)}`} aria-pressed={dayIso === value} className={`min-h-[34px] cursor-pointer rounded-[7px] border-0 ${dayIso === value ? 'bg-[#206c80] text-white' : 'bg-transparent text-ink hover:bg-[#e5f2f4]'}`} data-iso={dayIso} key={dayIso} onKeyDown={(event) => handleDayKeyDown(event, dayDate)} onClick={() => { onChange(dayIso); setRequiredError(false); setOpen(false) }} type="button">{fa(i + 1)}</button>
         })}
       </div>
-      <button className="mt-[6px] min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent px-[10px] py-1 text-[#206c80]" onClick={() => { onChange(localTodayISO()); setOpen(false) }} type="button">امروز</button>
+      <button className="mt-[6px] min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent px-[10px] py-1 text-[#206c80]" onClick={() => { onChange(localTodayISO()); setRequiredError(false); setOpen(false) }} type="button">امروز</button>
     </div>}
   </div>
 }

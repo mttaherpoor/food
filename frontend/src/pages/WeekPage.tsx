@@ -48,7 +48,31 @@ export default function WeekPage() {
     }
   }, [startIso])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    let active = true
+
+    Promise.all([
+      api<WeeklyMenu[]>(`/reservations/weekly?start=${startIso}`),
+      api<CatalogItem[]>('/sides'),
+      api<CatalogItem[]>('/drinks'),
+    ])
+      .then(([weekMenus, sideItems, drinkItems]) => {
+        if (!active) return
+        setMenus(weekMenus)
+        setSides(sideItems)
+        setDrinks(drinkItems)
+      })
+      .catch((loadError: unknown) => {
+        if (active) setError(getApiMessage(loadError))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [startIso])
 
   const days = useMemo(() => Array.from({ length: 6 }, (_, index) => {
     const date = dateToIso(addDays(weekStart, index))
@@ -185,7 +209,10 @@ function ReservationDialog({
   const [cancelled, setCancelled] = useState(false)
   const dialogRef = useRef<HTMLElement>(null)
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -321,8 +348,15 @@ function ReservationDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-10 grid place-items-center overflow-y-auto bg-[#10232b80] p-5" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section aria-labelledby="reservation-dialog-title" aria-modal="true" className="w-full max-w-[480px] max-h-[min(90svh,760px)] overflow-y-auto rounded-2xl border border-white/50 bg-white p-[22px] shadow-[0_20px_70px_#09252d33] max-[680px]:max-h-[88svh] max-[680px]:self-end max-[680px]:rounded-t-2xl max-[680px]:rounded-b-[10px] max-[680px]:p-[19px]" ref={dialogRef} tabIndex={-1} role="dialog">
+    <div className="fixed inset-0 z-10 grid place-items-center overflow-y-auto bg-[#10232b80] p-5">
+      <button
+        type="button"
+        aria-label="بستن پنجره رزرو با کلیک روی پس‌زمینه"
+        className="absolute inset-0 h-full w-full cursor-default border-0 bg-transparent"
+        onClick={onClose}
+        tabIndex={-1}
+      />
+      <section aria-labelledby="reservation-dialog-title" aria-modal="true" className="relative z-10 w-full max-w-[480px] max-h-[min(90svh,760px)] overflow-y-auto rounded-2xl border border-white/50 bg-white p-[22px] shadow-[0_20px_70px_#09252d33] max-[680px]:max-h-[88svh] max-[680px]:self-end max-[680px]:rounded-t-2xl max-[680px]:rounded-b-[10px] max-[680px]:p-[19px]" ref={dialogRef} tabIndex={-1} role="dialog">
         <div className="flex items-start justify-between gap-3 border-b border-line pb-[17px]">
           <div><p className="mt-0 mb-[3px] text-xs font-bold text-accent">{formatDate(menu.date)}</p><h2 className="m-0 text-xl" id="reservation-dialog-title">{saved ? 'رزرو ثبت شد' : cancelled ? 'رزرو لغو شد' : menu.food_name}</h2></div>
           <button aria-label="بستن" className={iconButtonClass} onClick={onClose} type="button"><X size={19} /></button>

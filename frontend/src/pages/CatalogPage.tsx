@@ -51,7 +51,32 @@ export default function CatalogPage() {
     }
   }, [])
 
-  useEffect(() => { void loadCatalog() }, [loadCatalog])
+  useEffect(() => {
+    let active = true
+
+    Promise.all([
+      api<(CatalogItem & { container_price: number; total_price: number })[]>('/foods'),
+      api<CatalogItem[]>('/sides'),
+      api<CatalogItem[]>('/drinks'),
+    ])
+      .then(([foodRows, sideRows, drinkRows]) => {
+        if (!active) return
+        setFoods(foodRows)
+        setSides(sideRows)
+        setDrinks(drinkRows)
+        setSelectedFood((value) => value || foodRows[0]?.id.toString() || '')
+      })
+      .catch((loadError: unknown) => {
+        if (active) setError(getApiMessage(loadError))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   async function createFood(event: FormEvent) {
     event.preventDefault()
@@ -114,7 +139,7 @@ export default function CatalogPage() {
 </details>
       <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] bg-white">
   <summary className="cursor-pointer border-b border-[#dce7ea] bg-[#edf3f5] px-5 py-4 text-sm font-semibold text-[#274d59] hover:bg-[#e1edf1]">ثبت منوی روز</summary>
-<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white p-[18px]"><h2 className="mt-0 mb-[15px] text-base">ثبت منوی روز</h2><form className="grid gap-3" onSubmit={(event) => void createMenu(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">تاریخ<JalaliDatePicker onChange={setMenuDate} required value={menuDate} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">غذای روز<FoodPicker foods={foods} value={selectedFood} onChange={setSelectedFood} /></label><button className={buttonClass('primary', '')} disabled={!foods.length} type="submit">ثبت منو</button></form></section></div>
+<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white p-[18px]"><h2 className="mt-0 mb-[15px] text-base">ثبت منوی روز</h2><form className="grid gap-3" onSubmit={(event) => void createMenu(event)}><fieldset className="flex min-w-0 flex-col gap-2 !m-0 border-0 p-0"><legend className="mb-2 text-sm font-semibold text-[#34393c]">تاریخ</legend><JalaliDatePicker onChange={setMenuDate} required value={menuDate} /></fieldset><fieldset className="flex min-w-0 flex-col gap-2 !m-0 border-0 p-0"><legend className="mb-2 text-sm font-semibold text-[#34393c]">غذای روز</legend><FoodPicker foods={foods} value={selectedFood} onChange={setSelectedFood} /></fieldset><button className={buttonClass('primary', '')} disabled={!foods.length} type="submit">ثبت منو</button></form></section></div>
 </details>
       <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] bg-white">
   <summary className="cursor-pointer border-b border-[#dce7ea] bg-[#edf3f5] px-5 py-4 text-sm font-semibold text-[#274d59] hover:bg-[#e1edf1]">افزودن گزینهٔ جانبی</summary>

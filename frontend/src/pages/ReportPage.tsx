@@ -17,7 +17,7 @@ export default function ReportPage() {
   const [fromDate, setFromDate] = useState(firstDay)
   const [toDate, setToDate] = useState(today)
   const [rows, setRows] = useState<DailyReport[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
   const total = rows.reduce((sum, row) => sum + row.total_toman, 0)
@@ -37,7 +37,26 @@ export default function ReportPage() {
     }
   }
 
-  useEffect(() => { void loadReport() }, [])
+  useEffect(() => {
+    let active = true
+
+    api<DailyReport[]>(`/reports/daily?from=${firstDay}&to=${today}`)
+      .then((reportRows) => {
+        if (!active) return
+        setRows(reportRows)
+        setLoaded(true)
+      })
+      .catch((loadError: unknown) => {
+        if (active) setError(getApiMessage(loadError))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [firstDay, today])
 
   async function downloadReport() {
     setError('')
@@ -64,8 +83,8 @@ export default function ReportPage() {
   return <section className="min-w-0" aria-labelledby="report-title">
     <div className="mb-[25px] flex items-end justify-between gap-[18px] max-[680px]:mb-[18px] max-[680px]:items-start [&_h1]:m-0 [&_h1]:text-[clamp(26px,3vw,34px)] [&_h1]:leading-[1.35] [&_h1]:tracking-[-0.8px] max-[680px]:[&_h1]:text-[27px]"><div><p className="mt-0 mb-2 text-xs font-bold text-accent">گزارش مدیریتی</p><h1 id="report-title">گزارش روزانهٔ رزرو</h1><p className="mt-[7px] mb-0 text-sm leading-[1.7] text-muted max-[680px]:max-w-[440px] max-[680px]:text-xs">تعداد غذا و مبلغ رزروهای فعال را بر اساس تاریخ ببین.</p></div></div>
     <form className="flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-line bg-white p-[17px] max-[680px]:flex-col max-[680px]:items-stretch" onSubmit={(event) => void loadReport(event)}>
-      <label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0 min-w-[180px] max-[680px]:min-w-0">از تاریخ<JalaliDatePicker onChange={setFromDate} required value={fromDate} /></label>
-      <label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0 min-w-[180px] max-[680px]:min-w-0">تا تاریخ<JalaliDatePicker onChange={setToDate} required value={toDate} /></label>
+      <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0"><legend className="mb-2 text-sm font-semibold text-[#34393c]">از تاریخ</legend><JalaliDatePicker onChange={setFromDate} required value={fromDate} /></fieldset>
+      <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0"><legend className="mb-2 text-sm font-semibold text-[#34393c]">تا تاریخ</legend><JalaliDatePicker onChange={setToDate} required value={toDate} /></fieldset>
       <button className={buttonClass('primary', '')} disabled={loading} type="submit">{loading ? 'در حال دریافت…' : 'نمایش گزارش'}</button>
       <button className={buttonClass('neutral', '')} onClick={() => void downloadReport()} type="button">خروجی Excel (شمسی)</button>
     </form>
