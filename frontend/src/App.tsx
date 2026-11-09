@@ -1,4 +1,7 @@
-import { buttonClass, iconButtonClass, textButtonClass } from './buttonStyles'
+import { addDays, dateToIso, formatDate, getWeekStart } from './utils/date'
+import { getApiMessage } from './utils/errors'
+import { formatMoney } from './utils/format'
+import { buttonClass, iconButtonClass, textButtonClass } from './components/ui/buttonStyles'
 import {
   CalendarDays,
   ChartNoAxesCombined,
@@ -14,16 +17,21 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 
+import { api, apiClient, ApiError } from './api/client'
 import {
-  api,
-  ApiError,
   changePassword,
   getSession,
   login,
   logout,
-} from './api'
-import type { CatalogItem, DailyReport, Reservation, User, WeeklyMenu } from './api'
-import JalaliDatePicker, { jalaliMonthStartISO } from './JalaliDatePicker'
+} from './api/endpoints'
+import type {
+  CatalogItem,
+  DailyReport,
+  Reservation,
+  User,
+  WeeklyMenu,
+} from './api/types'
+import JalaliDatePicker, { jalaliMonthStartISO } from './components/ui/JalaliDatePicker'
 
 type Page = 'week' | 'history' | 'report' | 'catalog'
 type CatalogKind = 'foods' | 'sides' | 'drinks'
@@ -51,39 +59,6 @@ function readPage(): Page {
 
 function routeFor(page: Page) {
   return { week: '/reservations', history: '/history', report: '/reports', catalog: '/catalog' }[page]
-}
-
-function formatMoney(amount: number) {
-  return `${new Intl.NumberFormat('fa-IR').format(amount)} تومان`
-}
-
-function formatDate(date: string, options: Intl.DateTimeFormatOptions = {}) {
-  return new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    ...options,
-  }).format(new Date(`${date}T12:00:00`))
-}
-
-function dateToIso(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function getWeekStart(date: Date) {
-  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  start.setDate(start.getDate() - ((start.getDay() + 1) % 7))
-  return start
-}
-
-function addDays(date: Date, count: number) {
-  const result = new Date(date)
-  result.setDate(result.getDate() + count)
-  return result
-}
-
-function getApiMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'خطایی رخ داد. دوباره تلاش کنید.'
 }
 
 export default function App() {
@@ -850,9 +825,14 @@ function ReportPage() {
   async function downloadReport() {
     setError('')
     try {
-      const response = await fetch(`/api/v1/reports/daily/export?from=${fromDate}&to=${toDate}`, { credentials: 'same-origin' })
-      if (!response.ok) throw new Error(`خطای دریافت فایل Excel (${response.status})`)
-      const blob = await response.blob()
+      const response = await apiClient.get<Blob>(
+        '/reports/daily/export',
+        {
+          params: { from: fromDate, to: toDate },
+          responseType: 'blob',
+        },
+      )
+      const blob = response.data
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
