@@ -16,11 +16,11 @@ class ProfileAdmin(ModelAdmin):
     list_display = (
         'personnel_number',
         'user',
-        'building_number',
-        'department_number',
+        'building',
+        'department',
     )
     search_fields = ('personnel_number',)
-    list_select_related = ('user',)
+    list_select_related = ('user', 'building', 'department')
 
 
 

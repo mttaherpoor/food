@@ -18,8 +18,6 @@ def create_or_synchronize_profile(sender, instance: CustomUser, **kwargs) -> Non
         user=instance,
         defaults={
             'personnel_number': instance.username,
-            'building_number': '',
-            'department_number': '',
         },
     )
     if not created and profile.personnel_number != instance.username:

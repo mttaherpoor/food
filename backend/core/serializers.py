@@ -76,8 +76,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class EmployeeSerializer(serializers.ModelSerializer):
     personnel_number = serializers.CharField(source='profile.personnel_number')
-    building_number = serializers.CharField(source='profile.building_number')
-    department_number = serializers.CharField(source='profile.department_number')
+    building_number = serializers.CharField(source='profile.building.number', read_only=True, allow_null=True)
+    department_number = serializers.CharField(source='profile.department.number', read_only=True, allow_null=True)
 
     class Meta:
         model = CustomUser
@@ -128,6 +128,9 @@ class EmployeeUpdateSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    building_number = serializers.CharField(source='building.number', read_only=True, allow_null=True)
+    department_number = serializers.CharField(source='department.number', read_only=True, allow_null=True)
+
     building = serializers.PrimaryKeyRelatedField(
         queryset=Building.objects.filter(is_active=True),
         required=False,
