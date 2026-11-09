@@ -108,43 +108,15 @@ export default function App() {
 
         if ('authenticated' in session) {
           setUser(null)
-
-          if (normalizePath(window.location.pathname) !== '/login') {
-            setPendingPath(
-              normalizePath(window.location.pathname) === '/'
-                ? '/reservations'
-                : window.location.pathname
-            )
-            navigate(loginDestination(window.location.pathname), { replace: true })
-          }
-
           return
         }
 
         setUser(session)
-
-        if (session.must_change_password) return
-
-        const path = normalizePath(window.location.pathname)
-
-        if (path === '/login' || path === '/') {
-          navigate(
-            path === '/login'
-              ? permittedPath(requestedDestination('/reservations'), session)
-              : '/reservations',
-            { replace: true }
-          )
-        }
       })
       .catch((error: unknown) => {
         if (!alive) return
 
-        const path = normalizePath(window.location.pathname)
-
-        if (path !== '/login') {
-          setPendingPath(path === '/' ? '/reservations' : path)
-          navigate(loginDestination(window.location.pathname), { replace: true })
-        }
+        setUser(null)
 
         if (
           error instanceof ApiError &&
@@ -161,7 +133,7 @@ export default function App() {
     return () => {
       alive = false
     }
-  }, [navigate])
+  }, [])
 
   async function handleLogin(username: string, password: string) {
     setLoginError('')
@@ -226,6 +198,12 @@ export default function App() {
   }
 
   if (!user) {
+    const path = normalizePath(location.pathname)
+
+    if (path !== '/login') {
+      return <Navigate to={loginDestination(path)} replace />
+    }
+
     return (
       <LoginScreen
         initialError={loginError}
