@@ -6,7 +6,4 @@ class CoreConfig(AppConfig):
     name = 'core'
 
     def ready(self) -> None:
-        from core import (
-            role_signals,
-            signals,
-        )
+        from core import signals  # noqa: F401
