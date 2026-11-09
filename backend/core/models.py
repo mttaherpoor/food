@@ -8,15 +8,36 @@ class CustomUser(AbstractUser):
     must_change_password = models.BooleanField(default=False)
 
 
+class Building(models.Model):
+    number = models.CharField(max_length=3, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('number',)
+
+    def __str__(self) -> str:
+        return self.number
+
+
+class Department(models.Model):
+    number = models.CharField(max_length=3, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ('number',)
+
+    def __str__(self) -> str:
+        return self.number
+
+
 class Profile(models.Model):
-    user = models.OneToOneField(
-        CustomUser,
-        on_delete=models.CASCADE,
-        related_name='profile',
-    )
+    user = models.OneToOneField(CustomUser,on_delete=models.CASCADE,related_name='profile')
     personnel_number = models.CharField(max_length=32, unique=True)
     building_number = models.CharField(max_length=32)
     department_number = models.CharField(max_length=32)
+
+    building = models.ForeignKey(Building, on_delete=models.PROTECT, null=True, blank=True, related_name='profiles')
+    department = models.ForeignKey(Department, on_delete=models.PROTECT, null=True, blank=True, related_name='profiles')
 
     def save(self, *args, **kwargs) -> None:
         # CustomUser.username is the canonical employee identifier.
