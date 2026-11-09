@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { User } from './types'
+import type { Profile, ProfileOptions, User } from './types'
 
 export const getCsrf = () => api<{ csrf_token: string }>('/auth/csrf')
 export const getSession = () =>
@@ -15,5 +15,23 @@ export function changePassword(old_password: string, new_password: string, new_p
   return api<User>('/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ old_password, new_password, new_password_confirm }),
+  })
+}
+
+
+
+export const getProfile = () =>
+  api<Profile>('/auth/profile')
+
+export const getProfileOptions = () =>
+  api<ProfileOptions>('/auth/profile-options')
+
+export function updateProfile(data: {
+  building?: number
+  department?: number
+}) {
+  return api<Profile>('/auth/profile', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
   })
 }

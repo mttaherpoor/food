@@ -1,1 +1,1 @@
-export type Page = 'week' | 'history' | 'report' | 'catalog'
+export type Page = 'week' | 'history' | 'report' | 'catalog' | 'profile'

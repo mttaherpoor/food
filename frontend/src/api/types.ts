@@ -58,3 +58,23 @@ export type DailyReport = {
   food_quantity: number
   total_toman: number
 }
+
+
+
+export type Profile = {
+  personnel_number: string
+  building: number | null
+  building_number: string | null
+  department: number | null
+  department_number: string | null
+}
+
+export type ProfileOption = {
+  id: number
+  number: string
+}
+
+export type ProfileOptions = {
+  buildings: ProfileOption[]
+  departments: ProfileOption[]
+}

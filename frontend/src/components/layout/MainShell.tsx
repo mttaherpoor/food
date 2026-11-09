@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ClipboardList,
   LogOut,
+  UserRound,
   Utensils,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -16,6 +17,7 @@ import BrandMark from './BrandMark'
 const navItems: { key: Page; label: string; icon: typeof CalendarDays }[] = [
   { key: 'week', label: 'رزرو هفته', icon: CalendarDays },
   { key: 'history', label: 'سوابق من', icon: ClipboardList },
+  { key: 'profile', label: 'پروفایل', icon: UserRound },
 ]
 
 export default function MainShell({
@@ -53,15 +55,15 @@ export default function MainShell({
         <span className="text-xs text-muted">{user.username}</span>
         <button aria-label="خروج از حساب" className={iconButtonClass} onClick={onLogout} type="button"><LogOut size={18} /></button>
       </header>
-      <main className="min-h-svh ms-[236px] px-9 pb-12 max-[900px]:ms-[205px] max-[900px]:px-[23px] max-[680px]:ms-0 max-[680px]:min-h-0 max-[680px]:px-4 max-[680px]:pb-[93px]" id="main-content">
+      <main className={`min-h-svh ms-[236px] px-9 pb-12 max-[900px]:ms-[205px] max-[900px]:px-[23px] max-[680px]:ms-0 max-[680px]:min-h-0 max-[680px]:px-4 max-[680px]:pb-[93px] ${page === 'profile' ? 'min-[681px]:pb-3' : ''}`} id="main-content">
         <div className="flex h-[65px] items-center justify-between border-b border-line text-[13px] text-muted max-[680px]:hidden">
           <div className="flex items-center gap-[7px]">پی‌آی فود <ChevronLeft aria-hidden="true" size={14} /> سامانه رزرو غذا</div>
           <div>کد پرسنلی <strong className="ms-[5px] text-ink">{user.username}</strong></div>
         </div>
-        <div className="mx-auto mt-7 w-full max-w-[1060px] max-[680px]:mt-[22px]">{children}</div>
+        <div className={`mx-auto mt-7 w-full max-w-[1060px] max-[680px]:mt-[22px] ${page === 'profile' ? 'min-[681px]:mt-3' : ''}`}>{children}</div>
       </main>
       <nav className="mobile-nav fixed inset-x-0 bottom-0 z-[6] hidden justify-around border-t border-line bg-white/95 backdrop-blur-md max-[680px]:flex" aria-label="ناوبری پایین">
-        {items.slice(0, 4).map((item) => <NavButton key={item.key} item={item} active={page === item.key} onClick={() => onNavigate(item.key)} />)}
+        {items.map((item) => <NavButton key={item.key} item={item} active={page === item.key} onClick={() => onNavigate(item.key)} />)}
       </nav>
     </div>
   )

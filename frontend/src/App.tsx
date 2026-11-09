@@ -24,6 +24,7 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const ReportPage = lazy(() => import('./pages/ReportPage'))
 
 const CatalogPage = lazy(() => import('./pages/CatalogPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 function normalizePath(path: string): string {
   return path.replace(/\/+$/, '') || '/'
@@ -32,6 +33,7 @@ function normalizePath(path: string): string {
 function pageFromPath(path: string): Page {
   const normalized = normalizePath(path)
   if (normalized === '/history') return 'history'
+  if (normalized === '/profile') return 'profile'
   if (normalized === '/reports') return 'report'
   if (normalized === '/catalog' || normalized === '/menus') return 'catalog'
   return 'week'
@@ -43,6 +45,7 @@ function routeFor(page: Page): string {
     history: '/history',
     report: '/reports',
     catalog: '/catalog',
+    profile: '/profile',
   }[page]
 }
 
@@ -75,7 +78,7 @@ function requestedDestination(fallback: string): string {
 
   if (
     next &&
-    ['/reservations', '/history', '/reports', '/catalog', '/menus']
+    ['/reservations', '/history', '/reports', '/catalog', '/menus', '/profile']
       .includes(normalizePath(next))
   ) {
     return normalizePath(next)
@@ -294,6 +297,7 @@ export default function App() {
         <Routes>
         <Route path="/reservations" element={<WeekPage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route
           path="/reports"
           element={<ReportPage />}
