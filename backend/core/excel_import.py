@@ -9,8 +9,8 @@ from openpyxl import load_workbook
 from openpyxl.cell.cell import Cell
 
 from core.models import CustomUser
-from core.validators import validate_building_number, validate_department_number
 from core.services import create_employee
+from core.validators import validate_building_number, validate_department_number
 
 EMPLOYEE_SHEET = 'Employees'
 EMPLOYEE_HEADERS = (
@@ -122,9 +122,7 @@ def read_employee_rows(path: Path) -> list[EmployeeImportRow]:
                 seen_personnel_numbers.add(personnel_number)
                 rows.append(row)
             except ValidationError as exc:
-                errors.append(
-                    f'{EMPLOYEE_SHEET}!{row_number}: {_validation_messages(exc)}'
-                )
+                errors.append(f'{EMPLOYEE_SHEET}!{row_number}: {_validation_messages(exc)}')
             except (TypeError, ValueError) as exc:
                 errors.append(f'{EMPLOYEE_SHEET}!{row_number}: {exc}')
 

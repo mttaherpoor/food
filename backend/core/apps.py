@@ -6,4 +6,4 @@ class CoreConfig(AppConfig):
     name = 'core'
 
     def ready(self) -> None:
-        from core import signals  # noqa: F401
+        from core import signals

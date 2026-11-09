@@ -31,7 +31,7 @@ class Department(models.Model):
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(CustomUser,on_delete=models.CASCADE,related_name='profile')
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profile')
     personnel_number = models.CharField(max_length=32, unique=True)
 
     building = models.ForeignKey(Building, on_delete=models.PROTECT, null=True, blank=True, related_name='profiles')

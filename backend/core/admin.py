@@ -23,7 +23,6 @@ class ProfileAdmin(ModelAdmin):
     list_select_related = ('user', 'building', 'department')
 
 
-
 @admin.register(Building)
 class BuildingAdmin(ModelAdmin):
     list_display = ('number', 'is_active')

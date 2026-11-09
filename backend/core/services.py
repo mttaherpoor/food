@@ -12,8 +12,11 @@ from core.validators import (
 
 UNSET = object()
 
+
 @transaction.atomic
-def create_employee(*,personnel_number:str,building_number:str,department_number:str,is_active:bool=True) ->CustomUser:
+def create_employee(
+    *, personnel_number: str, building_number: str, department_number: str, is_active: bool = True
+) -> CustomUser:
     personnel_number = normalize_personnel_number(personnel_number)
     building = validate_building_number(building_number)
     department = validate_department_number(department_number)

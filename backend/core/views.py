@@ -120,21 +120,15 @@ class AuthViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=['get'], url_path='profile-options')
     def profile_options(self, request):
-        buildings = list(
-            Building.objects.filter(is_active=True)
-            .order_by('number')
-            .values('id', 'number')
-        )
-        departments = list(
-            Department.objects.filter(is_active=True)
-            .order_by('number')
-            .values('id', 'number')
-        )
+        buildings = list(Building.objects.filter(is_active=True).order_by('number').values('id', 'number'))
+        departments = list(Department.objects.filter(is_active=True).order_by('number').values('id', 'number'))
 
-        return Response({
-            'buildings': buildings,
-            'departments': departments,
-        })
+        return Response(
+            {
+                'buildings': buildings,
+                'departments': departments,
+            }
+        )
 
     @extend_schema(request=None, responses={204: None})
     @action(detail=False, methods=['post'])

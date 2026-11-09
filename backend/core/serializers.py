@@ -126,7 +126,6 @@ class EmployeeUpdateSerializer(serializers.Serializer):
         return EmployeeSerializer(instance, context=self.context).data
 
 
-
 class ProfileSerializer(serializers.ModelSerializer):
     building_number = serializers.CharField(source='building.number', read_only=True, allow_null=True)
     department_number = serializers.CharField(source='department.number', read_only=True, allow_null=True)
