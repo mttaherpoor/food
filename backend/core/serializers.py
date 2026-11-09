@@ -1,11 +1,12 @@
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 
-from django.contrib.auth import authenticate, password_validation
+from django.contrib.auth import authenticate
 from django.core.exceptions import ValidationError as DjangoValidationError
 
-from core.models import CustomUser
-from core.services import create_employee, update_employee
+from core.models import Building, CustomUser, Department, Profile
+from core.services import create_employee, update_employee, update_profile_preferences
+from core.validators import validate_new_password
 
 
 def convert_validation_error(exc: DjangoValidationError) -> serializers.ValidationError:
@@ -66,12 +67,10 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError({'old_password': 'The current password is incorrect.'})
         if attrs['new_password'] != attrs['new_password_confirm']:
             raise serializers.ValidationError({'new_password_confirm': 'The two password values do not match.'})
-        if attrs['new_password'] == user.username:
-            raise serializers.ValidationError({'new_password': 'The new password cannot be the personnel number.'})
         try:
-            password_validation.validate_password(attrs['new_password'], user)
+            validate_new_password(attrs['new_password'], user)
         except DjangoValidationError as exc:
-            raise serializers.ValidationError({'new_password': list(exc.messages)}) from exc
+            raise convert_validation_error(exc) from exc
         return attrs
 
 
@@ -125,3 +124,39 @@ class EmployeeUpdateSerializer(serializers.Serializer):
 
     def to_representation(self, instance):
         return EmployeeSerializer(instance, context=self.context).data
+
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    building = serializers.PrimaryKeyRelatedField(
+        queryset=Building.objects.filter(is_active=True),
+        required=False,
+    )
+    department = serializers.PrimaryKeyRelatedField(
+        queryset=Department.objects.filter(is_active=True),
+        required=False,
+    )
+
+    class Meta:
+        model = Profile
+        fields = (
+            'personnel_number',
+            'building',
+            'building_number',
+            'department',
+            'department_number',
+        )
+        read_only_fields = (
+            'personnel_number',
+            'building_number',
+            'department_number',
+        )
+
+    def update(self, instance, validated_data):
+        try:
+            return update_profile_preferences(
+                instance.user,
+                **validated_data,
+            )
+        except DjangoValidationError as exc:
+            raise convert_validation_error(exc) from exc

@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 
 from typing import ClassVar
 
-from core.models import CustomUser
+from core.models import Building, CustomUser, Department
 from core.permissions import HasChangedInitialPassword, IsHRFoodOrSuperAdmin
 from core.serializers import (
     ChangePasswordSerializer,
@@ -19,6 +19,7 @@ from core.serializers import (
     EmployeeSerializer,
     EmployeeUpdateSerializer,
     LoginSerializer,
+    ProfileSerializer,
     SessionUserSerializer,
 )
 
@@ -45,6 +46,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         serializer_classes = {
             'login': LoginSerializer,
             'session': SessionUserSerializer,
+            'profile': ProfileSerializer,
             'change_password': ChangePasswordSerializer,
         }
         return serializer_classes.get(self.action, self.serializer_class)
@@ -98,6 +100,41 @@ class AuthViewSet(viewsets.GenericViewSet):
         user.save(update_fields=('password', 'must_change_password'))
         update_session_auth_hash(request, user)
         return Response(SessionUserSerializer(user).data)
+
+    @action(detail=False, methods=['get', 'patch'])
+    def profile(self, request):
+        profile = request.user.profile
+
+        if request.method == 'GET':
+            return Response(self.get_serializer(profile).data)
+
+        serializer = self.get_serializer(
+            profile,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'], url_path='profile-options')
+    def profile_options(self, request):
+        buildings = list(
+            Building.objects.filter(is_active=True)
+            .order_by('number')
+            .values('id', 'number')
+        )
+        departments = list(
+            Department.objects.filter(is_active=True)
+            .order_by('number')
+            .values('id', 'number')
+        )
+
+        return Response({
+            'buildings': buildings,
+            'departments': departments,
+        })
 
     @extend_schema(request=None, responses={204: None})
     @action(detail=False, methods=['post'])
