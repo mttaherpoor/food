@@ -9,7 +9,7 @@ import {
 
 import type { Page } from './app/navigation'
 import { canSeeReport, isManager } from './app/permissions'
-import { ApiError } from './api/client'
+import { ApiError, SESSION_EXPIRED_EVENT } from './api/client'
 import { getSession, login, logout } from './api/endpoints'
 import type { User } from './api/types'
 import MainShell from './components/layout/MainShell'
@@ -133,6 +133,22 @@ export default function App() {
 
     return () => {
       alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    function handleSessionExpired() {
+      const path = normalizePath(window.location.pathname)
+
+      setPendingPath(path === '/login' ? '/reservations' : path)
+      setLoginError('نشست شما منقضی شده است. دوباره وارد شوید.')
+      setUser(null)
+    }
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
     }
   }, [])
 

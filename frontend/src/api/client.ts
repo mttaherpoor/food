@@ -34,6 +34,41 @@ export const apiClient = axios.create({
   withCredentials: true,
 })
 
+
+export const SESSION_EXPIRED_EVENT = 'pi-food:session-expired'
+
+let sessionVerification: Promise<void> | null = null
+
+function verifySessionAfterAuthError(): Promise<void> {
+  if (sessionVerification) return sessionVerification
+
+  sessionVerification = apiClient
+    .get('/auth/session')
+    .then(({ data }: { data: unknown }) => {
+      if (
+        data &&
+        typeof data === 'object' &&
+        'authenticated' in data &&
+        data.authenticated === false
+      ) {
+        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+      }
+    })
+    .catch((error: unknown) => {
+      if (
+        axios.isAxiosError(error) &&
+        [401, 403].includes(error.response?.status ?? 0)
+      ) {
+        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+      }
+    })
+    .finally(() => {
+      sessionVerification = null
+    })
+
+  return sessionVerification
+}
+
 export async function api<T>(
   path: string,
   init: RequestInit = {},
@@ -67,6 +102,13 @@ export async function api<T>(
     return response.data
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
+      if (
+        [401, 403].includes(error.response.status) &&
+        !path.startsWith('/auth/')
+      ) {
+        await verifySessionAfterAuthError()
+      }
+
       throw new ApiError(
         error.response.status,
         error.response.data ?? null,

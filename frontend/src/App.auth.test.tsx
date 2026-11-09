@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router'
 import { http, HttpResponse } from 'msw'
 
 import App from './App'
+import { api } from './api/client'
 import type { User } from './api/types'
 import { server } from './test/server'
 
@@ -315,6 +316,51 @@ describe('Authentication and routing', () => {
     }])
 
     expect(window.location.pathname).toBe('/history')
+  })
+
+  it('redirects to login when an active session expires', async () => {
+    let sessionValid = true
+
+    server.use(
+      http.get('*/api/v1/auth/session', () =>
+        HttpResponse.json(
+          sessionValid ? employee : { authenticated: false }
+        )
+      ),
+      http.get('*/api/v1/menus', () =>
+        HttpResponse.json(
+          { detail: 'Authentication required' },
+          { status: 403 }
+        )
+      ),
+    )
+
+    renderAt('/history')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'صفحه سوابق آزمایشی',
+      })
+    ).toBeInTheDocument()
+
+    sessionValid = false
+
+    await expect(api('/menus')).rejects.toMatchObject({
+      status: 403,
+    })
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/login')
+      expect(
+        new URLSearchParams(window.location.search).get('next')
+      ).toBe('/history')
+    })
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'ورود به حساب',
+      })
+    ).toBeInTheDocument()
   })
 
   it('opens history directly with an authenticated session', async () => {
