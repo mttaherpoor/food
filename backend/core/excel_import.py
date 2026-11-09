@@ -9,6 +9,7 @@ from openpyxl import load_workbook
 from openpyxl.cell.cell import Cell
 
 from core.models import CustomUser
+from core.validators import validate_building_number, validate_department_number
 from core.services import create_employee
 
 EMPLOYEE_SHEET = 'Employees'
@@ -115,8 +116,15 @@ def read_employee_rows(path: Path) -> list[EmployeeImportRow]:
                     raise ValueError(f'duplicate personnel_number: {personnel_number}')
                 if CustomUser.objects.filter(username=personnel_number).exists():
                     raise ValueError(f'personnel_number already exists: {personnel_number}')
+                validate_building_number(row.building_number)
+                validate_department_number(row.department_number)
+
                 seen_personnel_numbers.add(personnel_number)
                 rows.append(row)
+            except ValidationError as exc:
+                errors.append(
+                    f'{EMPLOYEE_SHEET}!{row_number}: {_validation_messages(exc)}'
+                )
             except (TypeError, ValueError) as exc:
                 errors.append(f'{EMPLOYEE_SHEET}!{row_number}: {exc}')
 
