@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'IRANSansDN';
+  src: url('/fonts/iransansdnlight.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IRANSansDN';
+  src: url('/fonts/iransansdn.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IRANSansDN';
+  src: url('/fonts/iransansdnbold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 @theme inline {
   --color-ground: var(--ground);
   --color-surface: var(--surface);
@@ -17,7 +41,7 @@
 }
 
 :root {
-  font-family: 'IBM Plex Sans', Tahoma, sans-serif;
+  font-family: 'IRANSansDN', Tahoma, sans-serif;
   color: #131416;
   background: #f9fbfc;
   font-synthesis: none;
@@ -39,7 +63,7 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--ground); }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 3px solid #63a5b4; outline-offset: 2px; }
 button:disabled { cursor: not-allowed; opacity: .56; }
 
