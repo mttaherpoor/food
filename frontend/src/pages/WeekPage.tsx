@@ -14,7 +14,8 @@ import type { CatalogItem, ProfileOption, Reservation, WeeklyMenu } from '../api
 import EmptyState from '../components/ui/EmptyState'
 import ErrorMessage from '../components/ui/ErrorMessage'
 import LoadingRows from '../components/ui/LoadingRows'
-import { buttonClass, iconButtonClass, textButtonClass } from '../components/ui/buttonStyles'
+import QuantityField from '../components/ui/QuantityField'
+import { buttonClass, iconButtonClass } from '../components/ui/buttonStyles'
 import { addDays, dateToIso, formatDate, formatWeekday, getWeekStart } from '../utils/date'
 import { getApiMessage } from '../utils/errors'
 import { formatMoney } from '../utils/format'
@@ -110,7 +111,7 @@ export default function WeekPage() {
           <button aria-label="هفتهٔ قبل" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, -7))} type="button"><ChevronRight size={18} /></button>
           <strong className="whitespace-nowrap text-sm max-[680px]:text-xs">{formatDate(startIso, { weekday: undefined })} <span className="mx-1 font-normal text-[#899094]">تا</span> {formatDate(dateToIso(addDays(weekStart, 5)), { weekday: undefined })}</strong>
           <button aria-label="هفتهٔ بعد" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, 7))} type="button"><ChevronLeft size={18} /></button>
-          <button className={`${textButtonClass} text-accent!`} onClick={() => setWeekStart(getWeekStart(new Date()))} type="button">برو به هفته جاری</button>
+          <button className={buttonClass('primary', 'min-h-[36px] px-3 py-1.5 text-xs whitespace-nowrap max-[680px]:min-h-[34px] max-[680px]:px-2')} onClick={() => setWeekStart(getWeekStart(new Date()))} type="button">هفته جاری</button>
         </div>
         <div className="flex items-baseline gap-[7px] text-xs text-muted max-[680px]:self-start"><strong className="text-xl text-accent">{new Intl.NumberFormat('fa-IR').format(reservationCount)}</strong><span>رزرو فعال</span></div>
       </div>
@@ -453,9 +454,15 @@ function ReservationDialog({
             </p>
           )}
           <QuantityField label="تعداد غذا" value={foodQuantity} onChange={setFoodQuantity} />
-          <CatalogSelect label="ساید (اختیاری)" value={side} options={sides} onChange={setSide} />
-          {side && <QuantityField label="تعداد ساید" value={sideQuantity} onChange={setSideQuantity} />}
-          <CatalogSelect label="نوشیدنی (اختیاری)" value={drink} options={drinks} onChange={setDrink} />
+          <CatalogSelect label="پیش‌غذا (اختیاری)" value={side} options={sides} onChange={(value) => {
+            setSide(value)
+            if (value && sideQuantity < 1) setSideQuantity(1)
+          }} />
+          {side && <QuantityField label="تعداد پیش‌غذا" value={sideQuantity} onChange={setSideQuantity} />}
+          <CatalogSelect label="نوشیدنی (اختیاری)" value={drink} options={drinks} onChange={(value) => {
+            setDrink(value)
+            if (value && drinkQuantity < 1) setDrinkQuantity(1)
+          }} />
           {drink && <QuantityField label="تعداد نوشیدنی" value={drinkQuantity} onChange={setDrinkQuantity} />}
           <div className="mt-1 flex justify-between gap-[10px] border-t border-line py-[11px] text-sm text-muted"><span>جمع این انتخاب</span><strong className="text-ink">{formatMoney(total)}</strong></div>
           {error && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a]" role="alert">{error}</p>}
@@ -477,28 +484,13 @@ function CatalogSelect({ label, value, options, onChange }: { label: string; val
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
-        <option value="">انتخاب نکن</option>
+        <option value="">انتخاب</option>
         {options.map((item) => (
           <option key={item.id} value={item.id}>
             {item.name} · {formatMoney(item.price)}
           </option>
         ))}
       </select>
-    </label>
-  )
-}
-
-function QuantityField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return (
-    <label className="m-0 flex max-w-40 flex-col gap-2 text-sm font-semibold text-[#34393c]">
-      {label}
-      <input
-        className="min-h-10 w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink"
-        min={1}
-        onChange={(event) => onChange(Math.max(1, Number(event.target.value)))}
-        type="number"
-        value={value}
-      />
     </label>
   )
 }

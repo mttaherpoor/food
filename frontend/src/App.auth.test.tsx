@@ -88,6 +88,10 @@ describe('Authentication and routing', () => {
       ).toBe('/history')
     })
 
+    await screen.findByRole('heading', {
+      name: 'ورود به حساب',
+    })
+
     await fillLogin()
 
     expect(

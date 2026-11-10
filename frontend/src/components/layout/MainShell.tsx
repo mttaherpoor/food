@@ -7,7 +7,7 @@ import {
   UserRound,
   Utensils,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type { User } from '../../api/types'
 import type { Page } from '../../app/navigation'
 import { canSeeReport, isManager } from '../../app/permissions'
@@ -62,7 +62,7 @@ export default function MainShell({
         </div>
         <div className={`mx-auto mt-7 w-full max-w-[1060px] max-[680px]:mt-[22px] ${page === 'profile' ? 'min-[681px]:mt-3' : ''}`}>{children}</div>
       </main>
-      <nav className="mobile-nav fixed inset-x-0 bottom-0 z-[6] hidden justify-around border-t border-line bg-white/95 backdrop-blur-md max-[680px]:flex" aria-label="ناوبری پایین">
+      <nav style={{ "--mobile-nav-count": items.length } as CSSProperties} className="mobile-nav fixed inset-x-0 bottom-0 z-[6] hidden grid-cols-[repeat(var(--mobile-nav-count),minmax(0,1fr))] border-t border-line bg-white/95 backdrop-blur-md max-[680px]:grid" aria-label="ناوبری پایین">
         {items.map((item) => <NavButton key={item.key} item={item} active={page === item.key} onClick={() => onNavigate(item.key)} />)}
       </nav>
     </div>
@@ -71,5 +71,5 @@ export default function MainShell({
 
 function NavButton({ item, active, onClick }: { item: { key: Page; label: string; icon: typeof CalendarDays }; active: boolean; onClick: () => void }) {
   const Icon = item.icon
-  return <button aria-current={active ? 'page' : undefined} className={`nav-button flex min-h-11 cursor-pointer items-center gap-[11px] rounded-[9px] border-0 bg-transparent px-[11px] text-right text-sm transition-colors max-[680px]:min-w-0 max-[680px]:min-h-[51px] max-[680px]:flex-1 max-[680px]:flex-col max-[680px]:justify-center max-[680px]:gap-[3px] max-[680px]:px-[2px] max-[680px]:py-[5px] max-[680px]:text-[10px] ${active ? 'bg-accent-soft font-semibold text-accent' : 'text-[#555d61] hover:bg-raised'}`} onClick={onClick} type="button"><Icon aria-hidden="true" size={18} /><span>{item.label}</span></button>
+  return <button aria-current={active ? 'page' : undefined} className={`nav-button flex min-h-11 cursor-pointer items-center gap-[11px] rounded-[9px] border-0 bg-transparent px-[11px] text-right text-sm transition-colors max-[680px]:min-w-0 max-[680px]:min-h-[51px] max-[680px]:w-full max-[680px]:flex-col max-[680px]:items-center max-[680px]:justify-center max-[680px]:gap-[3px] max-[680px]:px-[2px] max-[680px]:py-[5px] max-[680px]:text-center max-[680px]:text-[10px] ${active ? 'bg-accent-soft font-semibold text-accent' : 'text-[#555d61] hover:bg-raised'}`} onClick={onClick} type="button"><Icon aria-hidden="true" size={18} /><span>{item.label}</span></button>
 }

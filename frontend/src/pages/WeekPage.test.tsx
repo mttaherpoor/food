@@ -490,4 +490,84 @@ describe('ReservationDialog building selection', () => {
       })
     })
   })
+
+  it('defaults selected side and drink quantities to one', async () => {
+    const user = userEvent.setup()
+    let submittedBody: unknown = null
+
+    server.use(
+      http.get('*/api/v1/reservations/weekly', () =>
+        HttpResponse.json([menu]),
+      ),
+      http.get('*/api/v1/sides', () =>
+        HttpResponse.json([{ id: 11, name: 'سالاد', price: 20000 }]),
+      ),
+      http.get('*/api/v1/drinks', () =>
+        HttpResponse.json([{ id: 21, name: 'دوغ', price: 10000 }]),
+      ),
+      http.get('*/api/v1/auth/profile', () =>
+        HttpResponse.json({
+          personnel_number: '1001',
+          building: 7,
+          building_number: '07',
+          department: null,
+          department_number: null,
+        }),
+      ),
+      http.get('*/api/v1/auth/profile-options', () =>
+        HttpResponse.json({
+          buildings: [{ id: 7, number: '07' }],
+          departments: [],
+        }),
+      ),
+      http.post('*/api/v1/reservations', async ({ request }) => {
+        submittedBody = await request.json()
+        return HttpResponse.json([], { status: 201 })
+      }),
+    )
+
+    render(<WeekPage />)
+
+    await user.click(
+      await screen.findByRole('button', { name: 'انتخاب غذا' }),
+    )
+
+    const sideSelect = await screen.findByRole('combobox', {
+      name: 'پیش‌غذا (اختیاری)',
+    })
+    const drinkSelect = screen.getByRole('combobox', {
+      name: 'نوشیدنی (اختیاری)',
+    })
+
+    await user.selectOptions(sideSelect, '11')
+    await user.selectOptions(drinkSelect, '21')
+
+    expect(
+      screen.getByRole('spinbutton', { name: 'تعداد پیش‌غذا' }),
+    ).toHaveValue(1)
+
+    expect(
+      screen.getByRole('spinbutton', { name: 'تعداد نوشیدنی' }),
+    ).toHaveValue(1)
+
+    await user.click(
+      screen.getByRole('button', { name: 'ثبت رزرو' }),
+    )
+
+    await waitFor(() => {
+      expect(submittedBody).toEqual({
+        reservations: [
+          {
+            menu: menu.id,
+            building: 7,
+            food_quantity: 1,
+            side: 11,
+            side_quantity: 1,
+            drink: 21,
+            drink_quantity: 1,
+          },
+        ],
+      })
+    })
+  })
 })
