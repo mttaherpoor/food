@@ -161,7 +161,10 @@ class ReservationSerializer(serializers.ModelSerializer):
 class WeeklyMenuSerializer(serializers.ModelSerializer):
     can_reserve = serializers.SerializerMethodField()
     food_name = serializers.CharField(source='food.name', read_only=True)
-    food_price = serializers.IntegerField(read_only=True)
+    food_price = serializers.IntegerField(
+        source='food.total_price',
+        read_only=True,
+    )
     reservation = serializers.SerializerMethodField()
 
     class Meta:

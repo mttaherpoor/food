@@ -45,12 +45,22 @@ def validate_reservation_window(menu: Menu, cutoff_hour: int) -> None:
 
 
 class ReservationPricing:
+    """Manage current catalog prices and historical snapshots."""
+
     @staticmethod
-    def snapshot(menu: Menu, side: Side | None, drink: Drink | None, data: dict) -> dict:
+    def current(menu: Menu, side: Side | None, drink: Drink | None) -> dict:
         return {
-            'food_price': menu.food_price,
-            'side_price': data.get('side_price', side.price if side else 0),
-            'drink_price': data.get('drink_price', drink.price if drink else 0),
+            'food_price': menu.food.total_price,
+            'side_price': side.price if side else 0,
+            'drink_price': drink.price if drink else 0,
+        }
+
+    @staticmethod
+    def snapshot(previous: ReservationItem) -> dict:
+        return {
+            'food_price': previous.food_price,
+            'side_price': previous.side_price,
+            'drink_price': previous.drink_price,
         }
 
 
@@ -72,13 +82,19 @@ class ReservationService:
         if drink and not isinstance(drink, Drink):
             drink = Drink.objects.get(pk=drink)
 
+        prices = (
+            ReservationPricing.snapshot(previous)
+            if cancelled and previous is not None
+            else ReservationPricing.current(menu, side, drink)
+        )
+
         return ReservationItem.objects.create(
             reservation=reservation,
             building=data.get('building'),
             building_number_snapshot=data.get('building_number_snapshot'),
             side=side,
             drink=drink,
-            **ReservationPricing.snapshot(menu, side, drink, data),
+            **prices,
             food_quantity=data.get('food_quantity', 1),
             side_quantity=data.get('side_quantity', 1) if side else 0,
             drink_quantity=data.get('drink_quantity', 1) if drink else 0,
@@ -176,16 +192,10 @@ class ReservationService:
             'food_quantity': data.get('food_quantity', previous.food_quantity),
             'side': side,
             'side_quantity': side_quantity,
-            'side_price': previous.side_price,
             'drink': drink,
             'drink_quantity': drink_quantity,
-            'drink_price': previous.drink_price,
         }
 
-        if 'side' in data and data['side'] != previous.side:
-            revision_data['side_price'] = data['side'].price if data['side'] else 0
-        if 'drink' in data and data['drink'] != previous.drink:
-            revision_data['drink_price'] = data['drink'].price if data['drink'] else 0
         if 'side' in data and data['side'] is None:
             revision_data['side_quantity'] = 0
         if 'drink' in data and data['drink'] is None:

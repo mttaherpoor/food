@@ -41,6 +41,99 @@ class ReservationAPITests(TestCase):
         self.user.save(update_fields=['must_change_password'])
         self.client.force_login(self.user)
 
+    def test_catalog_repricing_preserves_revision_history(self):
+        side = Side.objects.create(name='Salad', price=200_000)
+        drink = Drink.objects.create(name='Doogh', price=150_000)
+
+        created = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                    'side': side.pk,
+                    'drink': drink.pk,
+                }],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+
+        reservation_id = created.json()[0]['id']
+        reservation = Reservation.objects.get(pk=reservation_id)
+
+        initial = reservation.current_item
+        self.assertEqual(initial.food_price, 1_100_000)
+        self.assertEqual(initial.side_price, 200_000)
+        self.assertEqual(initial.drink_price, 150_000)
+
+        self.food.price = 2_000_000
+        self.food.save(update_fields=('price', 'datetime_modified'))
+        side.price = 300_000
+        side.save(update_fields=('price', 'datetime_modified'))
+        drink.price = 250_000
+        drink.save(update_fields=('price', 'datetime_modified'))
+
+        updated = self.client.patch(
+            reverse('reservation-detail', kwargs={'pk': reservation_id}),
+            {'food_quantity': 2},
+            content_type='application/json',
+        )
+        self.assertEqual(updated.status_code, 200, updated.content)
+
+        edited = reservation.current_item
+        self.assertEqual(edited.food_price, 2_100_000)
+        self.assertEqual(edited.side_price, 300_000)
+        self.assertEqual(edited.drink_price, 250_000)
+        self.assertEqual(edited.food_quantity, 2)
+        self.assertEqual(edited.total_price, 4_750_000)
+
+        cancelled = self.client.post(
+            reverse('reservation-cancel', kwargs={'pk': reservation_id}),
+        )
+        self.assertEqual(cancelled.status_code, 200, cancelled.content)
+
+        cancelled_item = reservation.current_item
+        self.assertTrue(cancelled_item.is_cancelled)
+        self.assertEqual(cancelled_item.food_price, 2_100_000)
+        self.assertEqual(cancelled_item.side_price, 300_000)
+        self.assertEqual(cancelled_item.drink_price, 250_000)
+        self.assertEqual(cancelled_item.total_price, 0)
+
+        self.food.price = 3_000_000
+        self.food.save(update_fields=('price', 'datetime_modified'))
+        side.price = 400_000
+        side.save(update_fields=('price', 'datetime_modified'))
+        drink.price = 350_000
+        drink.save(update_fields=('price', 'datetime_modified'))
+
+        restored = self.client.patch(
+            reverse('reservation-detail', kwargs={'pk': reservation_id}),
+            {'food_quantity': 1},
+            content_type='application/json',
+        )
+        self.assertEqual(restored.status_code, 200, restored.content)
+
+        reservation.refresh_from_db()
+        current = reservation.current_item
+
+        self.assertEqual(reservation.status, Reservation.Status.RESERVED)
+        self.assertEqual(current.food_price, 3_100_000)
+        self.assertEqual(current.side_price, 400_000)
+        self.assertEqual(current.drink_price, 350_000)
+        self.assertEqual(current.total_price, 3_850_000)
+
+        history = list(reservation.items.order_by('pk'))
+        self.assertEqual(len(history), 4)
+        self.assertEqual(
+            [item.food_price for item in history],
+            [1_100_000, 2_100_000, 2_100_000, 3_100_000],
+        )
+        self.assertEqual(
+            [item.is_current for item in history],
+            [False, False, False, True],
+        )
+
     def test_create_reservation_with_building(self):
         response = self.client.post(
             reverse('reservation-list'),
@@ -136,7 +229,8 @@ class ReservationAPITests(TestCase):
         self.assertEqual(old_item.side_price, 200_000)
         self.assertIsNone(current_item.side)
         self.assertEqual(current_item.side_price, 0)
-        self.assertEqual(current_item.food_price, 1_100_000)
+        self.assertEqual(old_item.food_price, 1_100_000)
+        self.assertEqual(current_item.food_price, 2_100_000)
 
         self.assertEqual(old_item.building_id, self.building.pk)
         self.assertEqual(current_item.building_id, self.building.pk)
@@ -256,6 +350,46 @@ class ReservationAPITests(TestCase):
         self.assertEqual(response.status_code, 400, response.content)
         self.assertIn('menu', response.json())
         self.assertEqual(Reservation.objects.count(), 0)
+
+    def test_weekly_menu_shows_current_catalog_price(self):
+        original_menu_price = self.menu.food_price
+
+        self.food.price = 2_000_000
+        self.food.save(update_fields=('price', 'datetime_modified'))
+
+        self.menu.refresh_from_db()
+        self.assertEqual(self.menu.food_price, original_menu_price)
+
+        response = self.client.get(
+            reverse('reservation-weekly'),
+            {'start': '2099-01-01'},
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+
+        menu_data = next(
+            item for item in response.json()
+            if item['id'] == self.menu.pk
+        )
+
+        self.assertEqual(menu_data['food_price'], 2_100_000)
+
+        created = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                }],
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(created.status_code, 201, created.content)
+        self.assertEqual(
+            created.json()[0]['current_item']['food_price'],
+            menu_data['food_price'],
+        )
 
     def test_employee_can_load_weekly_menu_and_only_sees_own_reservations(self):
         response = self.client.get(
