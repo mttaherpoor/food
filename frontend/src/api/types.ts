@@ -13,6 +13,8 @@ export type CatalogItem = { id: number; name: string; price: number }
 
 export type ReservationItem = {
   id: number
+  building: number | null
+  building_number_snapshot: string | null
   side: number | null
   side_name: string | null
   drink: number | null

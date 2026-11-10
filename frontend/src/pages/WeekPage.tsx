@@ -9,7 +9,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { api } from '../api/client'
-import type { CatalogItem, Reservation, WeeklyMenu } from '../api/types'
+import { getProfile, getProfileOptions } from '../api/endpoints'
+import type { CatalogItem, ProfileOption, Reservation, WeeklyMenu } from '../api/types'
 import EmptyState from '../components/ui/EmptyState'
 import ErrorMessage from '../components/ui/ErrorMessage'
 import LoadingRows from '../components/ui/LoadingRows'
@@ -197,6 +198,10 @@ function ReservationDialog({
   onSaved: () => Promise<void>
 }) {
   const current = menu.reservation?.current_item
+  const [building, setBuilding] = useState(current?.building?.toString() ?? '')
+  const [buildingOptions, setBuildingOptions] = useState<ProfileOption[]>([])
+  const [buildingLoading, setBuildingLoading] = useState(true)
+  const [buildingLoadError, setBuildingLoadError] = useState('')
   const [side, setSide] = useState(current?.side?.toString() ?? '')
   const [drink, setDrink] = useState(current?.drink?.toString() ?? '')
   const [foodQuantity, setFoodQuantity] = useState(current?.food_quantity ?? 1)
@@ -209,6 +214,39 @@ function ReservationDialog({
   const [cancelled, setCancelled] = useState(false)
   const dialogRef = useRef<HTMLElement>(null)
   const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    let active = true
+
+    Promise.all([getProfile(), getProfileOptions()])
+      .then(([profile, options]) => {
+        if (!active) return
+
+        setBuildingOptions(options.buildings)
+
+        if (!menu.reservation) {
+          const profileBuilding = profile.building
+          const isAvailable = options.buildings.some(
+            (option) => option.id === profileBuilding,
+          )
+          setBuilding(
+            profileBuilding !== null && isAvailable
+              ? String(profileBuilding)
+              : '',
+          )
+        }
+      })
+      .catch((loadError: unknown) => {
+        if (active) setBuildingLoadError(getApiMessage(loadError))
+      })
+      .finally(() => {
+        if (active) setBuildingLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [menu.reservation])
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -308,9 +346,27 @@ function ReservationDialog({
 
   async function save(event: FormEvent) {
     event.preventDefault()
-    setSaving(true)
     setError('')
+
+    if (!building || !Number.isInteger(Number(building))) {
+      setError('انتخاب ساختمان محل تحویل الزامی است.')
+      return
+    }
+
+    if (buildingLoading || buildingLoadError) {
+      setError('اطلاعات ساختمان‌ها هنوز آماده نیست.')
+      return
+    }
+
+    setSaving(true)
     const item = {
+      ...(
+        menu.reservation
+          ? building !== (current?.building?.toString() ?? '')
+            ? { building: Number(building) }
+            : {}
+          : { building: Number(building) }
+      ),
       food_quantity: foodQuantity,
       side: side ? Number(side) : null,
       ...(side ? { side_quantity: sideQuantity } : {}),
@@ -363,6 +419,39 @@ function ReservationDialog({
         </div>
         {saved || cancelled ? <div className="rounded-[9px] border border-[#c9e5d7] bg-[#f0faf4] p-[14px] leading-[1.8] text-[#176441]" role="status">{saved ? 'انتخابت برای این روز ثبت شد.' : 'رزرو این روز لغو شد و در سوابق باقی ماند.'}</div> : <form className="grid gap-[11px] pt-4" onSubmit={save}>
           <p className="m-0 flex justify-between gap-[10px] py-[11px] text-[13px] text-muted">غذای روز <strong className="text-ink">{formatMoney(menu.food_price)}</strong></p>
+          <label className="m-0 flex flex-col gap-2 text-sm font-semibold text-[#34393c]">
+            ساختمان محل تحویل
+            <select
+              className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink"
+              disabled={buildingLoading || Boolean(buildingLoadError)}
+              onChange={(event) => setBuilding(event.target.value)}
+              required
+              value={building}
+            >
+              <option value="">انتخاب ساختمان</option>
+              {current?.building != null &&
+                !buildingOptions.some((option) => option.id === current.building) && (
+                  <option value={current.building}>
+                    ساختمان {current.building_number_snapshot ?? 'قبلی'} (ثبت‌شده)
+                  </option>
+                )}
+              {buildingOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  ساختمان {option.number}
+                </option>
+              ))}
+            </select>
+          </label>
+          {buildingLoading && (
+            <p className="m-0 text-xs text-muted" role="status">
+              در حال دریافت اطلاعات ساختمان‌ها…
+            </p>
+          )}
+          {buildingLoadError && (
+            <p className="m-0 text-xs text-red-700" role="alert">
+              دریافت ساختمان‌ها ناموفق بود: {buildingLoadError}
+            </p>
+          )}
           <QuantityField label="تعداد غذا" value={foodQuantity} onChange={setFoodQuantity} />
           <CatalogSelect label="ساید (اختیاری)" value={side} options={sides} onChange={setSide} />
           {side && <QuantityField label="تعداد ساید" value={sideQuantity} onChange={setSideQuantity} />}
@@ -370,7 +459,7 @@ function ReservationDialog({
           {drink && <QuantityField label="تعداد نوشیدنی" value={drinkQuantity} onChange={setDrinkQuantity} />}
           <div className="mt-1 flex justify-between gap-[10px] border-t border-line py-[11px] text-sm text-muted"><span>جمع این انتخاب</span><strong className="text-ink">{formatMoney(total)}</strong></div>
           {error && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a]" role="alert">{error}</p>}
-          <button className={buttonClass('primary', 'w-full')} disabled={saving || canceling} type="submit">{saving ? 'در حال ثبت…' : menu.reservation?.status === 'can' ? 'ثبت رزرو مجدد' : menu.reservation ? 'ذخیرهٔ ویرایش' : 'ثبت رزرو'}</button>
+          <button className={buttonClass('primary', 'w-full')} disabled={saving || canceling || buildingLoading || Boolean(buildingLoadError)} type="submit">{saving ? 'در حال ثبت…' : menu.reservation?.status === 'can' ? 'ثبت رزرو مجدد' : menu.reservation ? 'ذخیرهٔ ویرایش' : 'ثبت رزرو'}</button>
           {menu.reservation?.status === 'res' && <button className={buttonClass('dangerQuiet', '')} disabled={saving || canceling} onClick={() => void cancelReservation()} type="button">{canceling ? 'در حال لغو…' : 'لغو غذای این روز'}</button>}
           <p className="mt-px mb-0 text-center text-[11px] text-muted">مهلت رزرو و ویرایش تا ساعت ۱۰ صبح روز قبل است.</p>
         </form>}
