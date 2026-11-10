@@ -1,13 +1,18 @@
 from rest_framework.exceptions import ValidationError
 
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
 
 from datetime import datetime, time, timedelta
-from zoneinfo import ZoneInfo
+from io import BytesIO
+from uuid import uuid4
+
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from core.models import Building
 from food.models import Drink, Menu, MenuStatus, Reservation, ReservationItem, Side
+from food.validators import validate_catalog_image
 
 
 def validate_reservation_building(building: Building | None) -> Building:
@@ -22,19 +27,18 @@ def validate_reservation_building(building: Building | None) -> Building:
 
     return building
 
-
-def _tehran_now():
-    return datetime.now(ZoneInfo('Asia/Tehran'))
-
+def _local_now():
+    return timezone.localtime(timezone.now(),timezone.get_default_timezone())
 
 def validate_reservation_window(menu: Menu, cutoff_hour: int) -> None:
-    tehran_timezone = ZoneInfo('Asia/Tehran')
-    now = _tehran_now()
+    current_timezone = timezone.get_default_timezone()
+    now = _local_now()
+
     if menu.date < now.date():
         raise ValidationError({'menu': 'رزرو برای روزهای گذشته امکان‌پذیر نیست.'})
     cutoff = timezone.make_aware(
         datetime.combine(menu.date - timedelta(days=1), time(hour=cutoff_hour)),
-        tehran_timezone,
+        current_timezone,
     )
     if now >= cutoff:
         raise ValidationError({'menu': 'مهلت رزرو تا ساعت 10 صبح روز قبل است.'})
@@ -179,3 +183,27 @@ def weekly_menus(user, start_date):
         )
         .order_by('date')
     )
+
+
+def prepare_catalog_image(uploaded_file) -> ContentFile:
+    """Validate and convert a catalog image to WebP."""
+
+    validate_catalog_image(uploaded_file)
+
+    try:
+        uploaded_file.seek(0)
+
+        with Image.open(uploaded_file) as image:
+            image.load()
+            processed = ImageOps.exif_transpose(image)
+
+            if processed.mode not in ('RGB', 'RGBA'):
+                processed = processed.convert('RGBA')
+
+            output = BytesIO()
+            processed.save(output, format='WEBP', quality=85, method=6)
+
+        return ContentFile(output.getvalue(), name=f'{uuid4().hex}.webp')
+
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+        raise ValidationError({'image': 'فایل تصویر معتبر یا قابل پردازش نیست.'}) from exc

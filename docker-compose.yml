@@ -65,6 +65,7 @@ services:
       - postgres_password
     volumes:
       - ./backend:/app
+      - food_media:/app/media
     depends_on:
       db:
         condition: service_healthy
@@ -88,6 +89,12 @@ services:
 
 volumes:
   postgres_data:
+  food_media:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/food/media
 
 networks:
   backend:
