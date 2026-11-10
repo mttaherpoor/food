@@ -15,6 +15,7 @@ class TimestampedModel(models.Model):
 
 class Food(TimestampedModel):
     name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='foods/', blank=True)
     price = models.PositiveBigIntegerField(
         verbose_name='price (Toman)',
         help_text='Whole amount in Toman.',
@@ -36,6 +37,7 @@ class Food(TimestampedModel):
 
 class Side(TimestampedModel):
     name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='sides/', blank=True)
     price = models.PositiveBigIntegerField(
         verbose_name='price (Toman)',
         help_text='Whole amount in Toman.',
@@ -47,6 +49,7 @@ class Side(TimestampedModel):
 
 class Drink(TimestampedModel):
     name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to='drinks/', blank=True)
     price = models.PositiveBigIntegerField(
         verbose_name='price (Toman)',
         help_text='Whole amount in Toman.',

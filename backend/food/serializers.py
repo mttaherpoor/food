@@ -1,7 +1,8 @@
 from rest_framework import serializers
 
+from django.utils import timezone
+
 from datetime import datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
 from core.models import Building
 from food.models import Drink, Food, Menu, MenuStatus, Reservation, ReservationItem, Side
@@ -173,6 +174,6 @@ class WeeklyMenuSerializer(serializers.ModelSerializer):
         return ReservationSerializer(reservation, context=self.context).data if reservation else None
 
     def get_can_reserve(self, menu):
-        tehran = ZoneInfo('Asia/Tehran')
-        cutoff = datetime.combine(menu.date - timedelta(days=1), time(hour=10), tzinfo=tehran)
-        return menu.status == MenuStatus.AVAILABLE and datetime.now(tehran) < cutoff
+        current_timezone = timezone.get_default_timezone()
+        cutoff = datetime.combine(menu.date - timedelta(days=1), time(hour=10), tzinfo=current_timezone)
+        return menu.status == MenuStatus.AVAILABLE and datetime.now(current_timezone) < cutoff
