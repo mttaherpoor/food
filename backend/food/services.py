@@ -44,133 +44,176 @@ def validate_reservation_window(menu: Menu, cutoff_hour: int) -> None:
         raise ValidationError({'menu': 'مهلت رزرو تا ساعت 10 صبح روز قبل است.'})
 
 
-def _create_revision(reservation: Reservation, data: dict, *, cancelled: bool = False) -> ReservationItem:
-    previous = reservation.items.select_for_update().filter(is_current=True).first()
-    if previous:
-        previous.is_current = False
-        previous.save(update_fields=('is_current', 'datetime_modified'))
-
-    menu = reservation.menu
-    side = data.get('side')
-    drink = data.get('drink')
-    if side and not isinstance(side, Side):
-        side = Side.objects.get(pk=side)
-    if drink and not isinstance(drink, Drink):
-        drink = Drink.objects.get(pk=drink)
-
-    return ReservationItem.objects.create(
-        reservation=reservation,
-        building=data.get('building'),
-        building_number_snapshot=data.get('building_number_snapshot'),
-        side=side,
-        drink=drink,
-        food_price=menu.food_price,
-        side_price=data.get('side_price', side.price if side else 0),
-        drink_price=data.get('drink_price', drink.price if drink else 0),
-        food_quantity=data.get('food_quantity', 1),
-        side_quantity=data.get('side_quantity', 1) if side else 0,
-        drink_quantity=data.get('drink_quantity', 1) if drink else 0,
-        is_current=True,
-        is_cancelled=cancelled,
-    )
-
-
-@transaction.atomic
-def create_reservations(user, rows: list[dict], *, cutoff_hour: int) -> list[Reservation]:
-    menus = {
-        menu.pk: menu
-        for menu in Menu.objects.select_for_update()
-        .filter(pk__in=[row['menu'].pk for row in rows])
-        .select_related('food')
-    }
-    results = []
-    for row in rows:
-        menu = menus.get(row['menu'].pk)
-        if menu is None:
-            raise ValidationError({'menu': 'منوی انتخاب‌شده پیدا نشد.'})
-        validate_reservation_window(menu, cutoff_hour)
-        if menu.status != MenuStatus.AVAILABLE:
-            raise ValidationError({'menu': 'این منو برای رزرو در دسترس نیست.'})
-        if Reservation.objects.filter(user=user, menu=menu).exists():
-            raise ValidationError({'menu': f'برای تاریخ {menu.date} قبلاً رزرو ثبت شده است.'})
-        building = validate_reservation_building(row.get('building'))
-        revision_data = {
-            **row,
-            'building': building,
-            'building_number_snapshot': building.number,
+class ReservationPricing:
+    @staticmethod
+    def snapshot(menu: Menu, side: Side | None, drink: Drink | None, data: dict) -> dict:
+        return {
+            'food_price': menu.food_price,
+            'side_price': data.get('side_price', side.price if side else 0),
+            'drink_price': data.get('drink_price', drink.price if drink else 0),
         }
-        reservation = Reservation.objects.create(user=user, menu=menu)
-        _create_revision(reservation, revision_data)
-        results.append(reservation)
-    return results
 
 
-@transaction.atomic
+class ReservationService:
+    """Reservation operations with immutable revision history."""
+
+    @classmethod
+    def _create_revision(cls, reservation: Reservation, data: dict, *, cancelled: bool = False) -> ReservationItem:
+        previous = reservation.items.select_for_update().filter(is_current=True).first()
+        if previous:
+            previous.is_current = False
+            previous.save(update_fields=('is_current', 'datetime_modified'))
+
+        menu = reservation.menu
+        side = data.get('side')
+        drink = data.get('drink')
+        if side and not isinstance(side, Side):
+            side = Side.objects.get(pk=side)
+        if drink and not isinstance(drink, Drink):
+            drink = Drink.objects.get(pk=drink)
+
+        return ReservationItem.objects.create(
+            reservation=reservation,
+            building=data.get('building'),
+            building_number_snapshot=data.get('building_number_snapshot'),
+            side=side,
+            drink=drink,
+            **ReservationPricing.snapshot(menu, side, drink, data),
+            food_quantity=data.get('food_quantity', 1),
+            side_quantity=data.get('side_quantity', 1) if side else 0,
+            drink_quantity=data.get('drink_quantity', 1) if drink else 0,
+            is_current=True,
+            is_cancelled=cancelled,
+        )
+
+    @classmethod
+    @transaction.atomic
+    def create(cls, user, rows: list[dict], *, cutoff_hour: int) -> list[Reservation]:
+        menus = {
+            menu.pk: menu
+            for menu in Menu.objects.select_for_update()
+            .filter(pk__in=[row['menu'].pk for row in rows])
+            .select_related('food')
+        }
+
+        results = []
+        for row in rows:
+            menu = menus.get(row['menu'].pk)
+            if menu is None:
+                raise ValidationError({'menu': 'منوی انتخاب‌شده پیدا نشد.'})
+            validate_reservation_window(menu, cutoff_hour)
+            if menu.status != MenuStatus.AVAILABLE:
+                raise ValidationError({'menu': 'این منو برای رزرو در دسترس نیست.'})
+            if Reservation.objects.filter(user=user, menu=menu).exists():
+                raise ValidationError({'menu': f'برای تاریخ {menu.date} قبلاً رزرو ثبت شده است.'})
+            building = validate_reservation_building(row.get('building'))
+            revision_data = {
+                **row,
+                'building': building,
+                'building_number_snapshot': building.number,
+            }
+            reservation = Reservation.objects.create(user=user, menu=menu)
+            cls._create_revision(reservation, revision_data)
+            results.append(reservation)
+        return results
+
+    @classmethod
+    @transaction.atomic
+    def revise(
+        cls,
+        reservation: Reservation,
+        data: dict,
+        *,
+        cancelled: bool = False,
+        cutoff_hour: int
+    ) -> Reservation:
+
+        reservation = Reservation.objects.select_for_update().select_related('menu__food').get(pk=reservation.pk)
+        validate_reservation_window(reservation.menu, cutoff_hour)
+        previous = reservation.items.filter(is_current=True).first()
+
+        if previous is None:
+            raise ValidationError('برای این رزرو نسخه جاری وجود ندارد.')
+        if previous.is_cancelled and cancelled:
+            raise ValidationError('این رزرو قبلاً لغو شده است.')
+        if previous.is_cancelled and reservation.menu.status != MenuStatus.AVAILABLE:
+            raise ValidationError({'menu': 'این منو برای رزرو مجدد در دسترس نیست.'})
+
+        side = data.get('side', previous.side)
+        drink = data.get('drink', previous.drink)
+        side_quantity = data.get('side_quantity', previous.side_quantity)
+        drink_quantity = data.get('drink_quantity', previous.drink_quantity)
+
+        if 'side' in data and side is not None and 'side_quantity' not in data and previous.side is None:
+            side_quantity = 1
+        if 'drink' in data and drink is not None and 'drink_quantity' not in data and previous.drink is None:
+            drink_quantity = 1
+        if side is None:
+            side_quantity = 0
+        if drink is None:
+            drink_quantity = 0
+        if 'side_quantity' in data and side is None and data['side_quantity'] > 0:
+            raise ValidationError({'side_quantity': 'برای تعیین تعداد، ابتدا ساید را انتخاب کنید.'})
+        if 'drink_quantity' in data and drink is None and data['drink_quantity'] > 0:
+            raise ValidationError({'drink_quantity': 'برای تعیین تعداد، ابتدا نوشیدنی را انتخاب کنید.'})
+
+        if cancelled:
+            building = previous.building
+            building_number_snapshot = previous.building_number_snapshot
+
+        elif 'building' in data:
+            building = validate_reservation_building(data['building'])
+            building_number_snapshot = building.number
+        else:
+            building = previous.building
+            building_number_snapshot = previous.building_number_snapshot
+            if building is None:
+                raise ValidationError({'building': 'انتخاب ساختمان الزامی است.'})
+
+        revision_data = {
+            'building': building,
+            'building_number_snapshot': building_number_snapshot,
+            'food_quantity': data.get('food_quantity', previous.food_quantity),
+            'side': side,
+            'side_quantity': side_quantity,
+            'side_price': previous.side_price,
+            'drink': drink,
+            'drink_quantity': drink_quantity,
+            'drink_price': previous.drink_price,
+        }
+
+        if 'side' in data and data['side'] != previous.side:
+            revision_data['side_price'] = data['side'].price if data['side'] else 0
+        if 'drink' in data and data['drink'] != previous.drink:
+            revision_data['drink_price'] = data['drink'].price if data['drink'] else 0
+        if 'side' in data and data['side'] is None:
+            revision_data['side_quantity'] = 0
+        if 'drink' in data and data['drink'] is None:
+            revision_data['drink_quantity'] = 0
+
+        cls._create_revision(reservation, revision_data, cancelled=cancelled)
+        new_status = Reservation.Status.CANCELLED if cancelled else Reservation.Status.RESERVED
+
+        if reservation.status != new_status:
+            reservation.status = new_status
+            reservation.save(update_fields=('status', 'datetime_modified'))
+        return reservation
+
+
+def create_reservations(user, rows: list[dict], *, cutoff_hour: int) -> list[Reservation]:
+    return ReservationService.create(user, rows, cutoff_hour=cutoff_hour)
+
+
 def revise_reservation(
     reservation: Reservation, data: dict, *, cancelled: bool = False, cutoff_hour: int
 ) -> Reservation:
-    reservation = Reservation.objects.select_for_update().select_related('menu__food').get(pk=reservation.pk)
-    validate_reservation_window(reservation.menu, cutoff_hour)
-    previous = reservation.items.filter(is_current=True).first()
-    if previous is None:
-        raise ValidationError('برای این رزرو نسخه جاری وجود ندارد.')
-    if previous.is_cancelled and cancelled:
-        raise ValidationError('این رزرو قبلاً لغو شده است.')
-    if previous.is_cancelled and reservation.menu.status != MenuStatus.AVAILABLE:
-        raise ValidationError({'menu': 'این منو برای رزرو مجدد در دسترس نیست.'})
-    side = data.get('side', previous.side)
-    drink = data.get('drink', previous.drink)
-    side_quantity = data.get('side_quantity', previous.side_quantity)
-    drink_quantity = data.get('drink_quantity', previous.drink_quantity)
-    if 'side' in data and side is not None and 'side_quantity' not in data and previous.side is None:
-        side_quantity = 1
-    if 'drink' in data and drink is not None and 'drink_quantity' not in data and previous.drink is None:
-        drink_quantity = 1
-    if side is None:
-        side_quantity = 0
-    if drink is None:
-        drink_quantity = 0
-    if 'side_quantity' in data and side is None and data['side_quantity'] > 0:
-        raise ValidationError({'side_quantity': 'برای تعیین تعداد، ابتدا ساید را انتخاب کنید.'})
-    if 'drink_quantity' in data and drink is None and data['drink_quantity'] > 0:
-        raise ValidationError({'drink_quantity': 'برای تعیین تعداد، ابتدا نوشیدنی را انتخاب کنید.'})
-    if cancelled:
-        building = previous.building
-        building_number_snapshot = previous.building_number_snapshot
-    elif 'building' in data:
-        building = validate_reservation_building(data['building'])
-        building_number_snapshot = building.number
-    else:
-        building = previous.building
-        building_number_snapshot = previous.building_number_snapshot
-        if building is None:
-            raise ValidationError({'building': 'انتخاب ساختمان الزامی است.'})
 
-    revision_data = {
-        'building': building,
-        'building_number_snapshot': building_number_snapshot,
-        'food_quantity': data.get('food_quantity', previous.food_quantity),
-        'side': side,
-        'side_quantity': side_quantity,
-        'side_price': previous.side_price,
-        'drink': drink,
-        'drink_quantity': drink_quantity,
-        'drink_price': previous.drink_price,
-    }
-    if 'side' in data and data['side'] != previous.side:
-        revision_data['side_price'] = data['side'].price if data['side'] else 0
-    if 'drink' in data and data['drink'] != previous.drink:
-        revision_data['drink_price'] = data['drink'].price if data['drink'] else 0
-    if 'side' in data and data['side'] is None:
-        revision_data['side_quantity'] = 0
-    if 'drink' in data and data['drink'] is None:
-        revision_data['drink_quantity'] = 0
-    _create_revision(reservation, revision_data, cancelled=cancelled)
-    new_status = Reservation.Status.CANCELLED if cancelled else Reservation.Status.RESERVED
-    if reservation.status != new_status:
-        reservation.status = new_status
-        reservation.save(update_fields=('status', 'datetime_modified'))
-    return reservation
+    return ReservationService.revise(
+        reservation,
+        data,
+        cancelled=cancelled,
+        cutoff_hour=cutoff_hour,
+    )
 
 
 def weekly_menus(user, start_date):
