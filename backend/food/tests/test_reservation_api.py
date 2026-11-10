@@ -1,9 +1,9 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from datetime import datetime
 from unittest.mock import patch
-from zoneinfo import ZoneInfo
 
 from core.models import Building, Department
 from core.services import create_employee
@@ -236,10 +236,10 @@ class ReservationAPITests(TestCase):
             1,
             10,
             0,
-            tzinfo=ZoneInfo('Asia/Tehran'),
+            tzinfo= timezone.get_default_timezone(),
         )
 
-        with patch('food.services._tehran_now', return_value=cutoff):
+        with patch('food.services._local_now', return_value=cutoff):
             response = self.client.post(
                 reverse('reservation-list'),
                 {
@@ -502,16 +502,16 @@ class ReservationAPITests(TestCase):
         cancelled = self.client.post(reverse('reservation-cancel', kwargs={'pk': reservation_id}))
         self.assertEqual(cancelled.status_code, 200, cancelled.content)
 
-        tehran_time = datetime(
+        local_time = datetime(
             2099,
             1,
             1,
             10,
             0,
-            tzinfo=ZoneInfo('Asia/Tehran'),
+            tzinfo=timezone.get_default_timezone(),
         )
 
-        with patch('food.services._tehran_now', return_value=tehran_time):
+        with patch('food.services._local_now', return_value=local_time):
             response = self.client.patch(
                 reverse('reservation-detail', kwargs={'pk': reservation_id}),
                 {'food_quantity': 1},
