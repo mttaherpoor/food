@@ -11,7 +11,16 @@ from uuid import uuid4
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from core.models import Building
-from food.models import Drink, Menu, MenuStatus, Reservation, ReservationItem, Side
+from food.models import (
+    Drink,
+    Menu,
+    MenuStatus,
+    Reservation,
+    ReservationDrinkItem,
+    ReservationItem,
+    ReservationSideItem,
+    Side,
+)
 from food.validators import validate_catalog_image
 
 
@@ -68,30 +77,88 @@ class ReservationService:
     """Reservation operations with immutable revision history."""
 
     @classmethod
-    def _create_revision(cls, reservation: Reservation, data: dict, *, cancelled: bool = False) -> ReservationItem:
-        previous = reservation.items.select_for_update().filter(is_current=True).first()
-        if previous:
-            previous.is_current = False
-            previous.save(update_fields=('is_current', 'datetime_modified'))
+    def _create_revision(
+        cls,
+        reservation: Reservation,
+        data: dict,
+        *,
+        cancelled: bool = False,
+    ) -> ReservationItem:
+        previous = (
+            reservation.items.select_for_update()
+            .filter(is_current=True)
+            .first()
+        )
 
         menu = reservation.menu
         side = data.get('side')
         drink = data.get('drink')
-        if side and not isinstance(side, Side):
+
+        if side is not None and not isinstance(side, Side):
             side = Side.objects.get(pk=side)
-        if drink and not isinstance(drink, Drink):
+        if drink is not None and not isinstance(drink, Drink):
             drink = Drink.objects.get(pk=drink)
 
-        prices = (
-            ReservationPricing.snapshot(previous)
-            if cancelled and previous is not None
-            else ReservationPricing.current(menu, side, drink)
+        def selections(plural, singular, legacy_product, related_name):
+            if plural in data:
+                return [
+                    (entry[singular], entry['quantity'])
+                    for entry in data[plural]
+                ]
+
+            if legacy_product is not None:
+                quantity = data.get(f'{singular}_quantity', 1)
+                return [(legacy_product, quantity)]
+
+            if previous is not None:
+                return [
+                    (getattr(row, singular), row.quantity)
+                    for row in getattr(previous, related_name)
+                    .select_related(singular).all()
+                ]
+
+            return []
+
+        side_selections = selections(
+            'sides', 'side', side, 'side_items'
+        )
+        drink_selections = selections(
+            'drinks', 'drink', drink, 'drink_items'
         )
 
-        return ReservationItem.objects.create(
+        if cancelled and previous is not None:
+            prices = ReservationPricing.snapshot(previous)
+            side_rows = [
+                (row.side_id, row.quantity, row.unit_price)
+                for row in previous.side_items.all()
+            ]
+            drink_rows = [
+                (row.drink_id, row.quantity, row.unit_price)
+                for row in previous.drink_items.all()
+            ]
+        else:
+            prices = ReservationPricing.current(menu, side, drink)
+            side_rows = [
+                (product.pk, quantity, product.price)
+                for product, quantity in side_selections
+            ]
+            drink_rows = [
+                (product.pk, quantity, product.price)
+                for product, quantity in drink_selections
+            ]
+
+        if previous is not None:
+            previous.is_current = False
+            previous.save(
+                update_fields=('is_current', 'datetime_modified')
+            )
+
+        revision = ReservationItem.objects.create(
             reservation=reservation,
             building=data.get('building'),
-            building_number_snapshot=data.get('building_number_snapshot'),
+            building_number_snapshot=data.get(
+                'building_number_snapshot'
+            ),
             side=side,
             drink=drink,
             **prices,
@@ -101,6 +168,28 @@ class ReservationService:
             is_current=True,
             is_cancelled=cancelled,
         )
+
+        ReservationSideItem.objects.bulk_create([
+            ReservationSideItem(
+                reservation_item=revision,
+                side_id=side_id,
+                quantity=quantity,
+                unit_price=unit_price,
+            )
+            for side_id, quantity, unit_price in side_rows
+        ])
+
+        ReservationDrinkItem.objects.bulk_create([
+            ReservationDrinkItem(
+                reservation_item=revision,
+                drink_id=drink_id,
+                quantity=quantity,
+                unit_price=unit_price,
+            )
+            for drink_id, quantity, unit_price in drink_rows
+        ])
+
+        return revision
 
     @classmethod
     @transaction.atomic
@@ -200,6 +289,27 @@ class ReservationService:
             revision_data['side_quantity'] = 0
         if 'drink' in data and data['drink'] is None:
             revision_data['drink_quantity'] = 0
+
+        if not cancelled:
+            if 'sides' in data:
+                revision_data['sides'] = data['sides']
+                revision_data['side'] = None
+                revision_data['side_quantity'] = 0
+            elif 'side' in data:
+                revision_data['sides'] = (
+                    [{'side': side, 'quantity': side_quantity}]
+                    if side is not None else []
+                )
+
+            if 'drinks' in data:
+                revision_data['drinks'] = data['drinks']
+                revision_data['drink'] = None
+                revision_data['drink_quantity'] = 0
+            elif 'drink' in data:
+                revision_data['drinks'] = (
+                    [{'drink': drink, 'quantity': drink_quantity}]
+                    if drink is not None else []
+                )
 
         cls._create_revision(reservation, revision_data, cancelled=cancelled)
         new_status = Reservation.Status.CANCELLED if cancelled else Reservation.Status.RESERVED

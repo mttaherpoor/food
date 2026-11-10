@@ -4,20 +4,19 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from django.db.models import BigIntegerField, Count, ExpressionWrapper, F, Q, Sum
+from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.utils.dateparse import parse_date
 
-from typing import ClassVar
 from io import BytesIO
+from typing import ClassVar
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from core.permissions import HasChangedInitialPassword, IsCatalogReaderOrManager, IsHRFoodViewerOrSuperAdmin
 from food.jalali import format_jalali_date
-from food.models import Drink, Food, Menu, Reservation, Side
-from food.services import create_reservations, revise_reservation, weekly_menus
+from food.models import Drink, Food, Menu, Reservation, ReservationItem, Side
 from food.serializers import (
     DailyReportSerializer,
     DrinkSerializer,
@@ -29,6 +28,7 @@ from food.serializers import (
     SideSerializer,
     WeeklyMenuSerializer,
 )
+from food.services import create_reservations, revise_reservation, weekly_menus
 
 RESERVATION_CUTOFF_HOUR = 10
 
@@ -142,56 +142,68 @@ class DailyReportViewSet(viewsets.ViewSet):
         if end_date < start_date:
             raise ValidationError({'to': 'تاریخ پایان نباید قبل از تاریخ شروع باشد.'})
 
-        current_item_total = ExpressionWrapper(
-            F('reservations__items__food_price') * F('reservations__items__food_quantity')
-            + F('reservations__items__side_price') * F('reservations__items__side_quantity')
-            + F('reservations__items__drink_price') * F('reservations__items__drink_quantity'),
-            output_field=BigIntegerField(),
+        current_items = ReservationItem.objects.filter(
+            is_current=True,
+        ).prefetch_related(
+            'side_items',
+            'drink_items',
         )
-        report_rows = (
+
+        report_reservations = Reservation.objects.prefetch_related(
+            Prefetch(
+                'items',
+                queryset=current_items,
+                to_attr='report_current_items',
+            ),
+        )
+
+        menus = (
             Menu.objects.filter(date__range=(start_date, end_date))
-            .values('date', 'food__name')
-            .annotate(
-                reserved_count=Count(
-                    'reservations__id',
-                    filter=Q(reservations__status=Reservation.Status.RESERVED),
-                    distinct=True,
-                ),
-                cancelled_count=Count(
-                    'reservations__id',
-                    filter=Q(reservations__status=Reservation.Status.CANCELLED),
-                    distinct=True,
-                ),
-                total_toman=Sum(
-                    current_item_total,
-                    filter=Q(
-                        reservations__status=Reservation.Status.RESERVED,
-                        reservations__items__is_current=True,
-                        reservations__items__is_cancelled=False,
-                    ),
-                ),
-                food_quantity=Sum(
-                    'reservations__items__food_quantity',
-                    filter=Q(
-                        reservations__status=Reservation.Status.RESERVED,
-                        reservations__items__is_current=True,
-                        reservations__items__is_cancelled=False,
-                    ),
+            .select_related('food')
+            .prefetch_related(
+                Prefetch(
+                    'reservations',
+                    queryset=report_reservations,
+                    to_attr='report_reservations',
                 ),
             )
             .order_by('date')
         )
-        data = [
-            {
-                'date': row['date'],
-                'food': row['food__name'],
-                'reserved_count': row['reserved_count'],
-                'cancelled_count': row['cancelled_count'],
-                'food_quantity': row['food_quantity'] or 0,
-                'total_toman': row['total_toman'] or 0,
-            }
-            for row in report_rows
-        ]
+
+        data = []
+
+        for menu in menus:
+            reserved_count = 0
+            cancelled_count = 0
+            food_quantity = 0
+            total_toman = 0
+
+            for reservation in menu.report_reservations:
+                if reservation.status == Reservation.Status.CANCELLED:
+                    cancelled_count += 1
+                    continue
+
+                if reservation.status != Reservation.Status.RESERVED:
+                    continue
+
+                reserved_count += 1
+
+                for item in reservation.report_current_items:
+                    if item.is_cancelled:
+                        continue
+
+                    food_quantity += item.food_quantity
+                    total_toman += item.total_price
+
+            data.append({
+                'date': menu.date,
+                'food': menu.food.name,
+                'reserved_count': reserved_count,
+                'cancelled_count': cancelled_count,
+                'food_quantity': food_quantity,
+                'total_toman': total_toman,
+            })
+
         return data
 
     def list(self, request):

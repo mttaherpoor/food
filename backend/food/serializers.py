@@ -71,7 +71,41 @@ class DailyReportSerializer(serializers.Serializer):
     total_toman = serializers.IntegerField(read_only=True)
 
 
+class ReservationSideInputSerializer(serializers.Serializer):
+    side = serializers.PrimaryKeyRelatedField(queryset=Side.objects.all())
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class ReservationDrinkInputSerializer(serializers.Serializer):
+    drink = serializers.PrimaryKeyRelatedField(queryset=Drink.objects.all())
+    quantity = serializers.IntegerField(min_value=1)
+
+
+def validate_catalog_selections(attrs, raw_data):
+    for plural, singular in (('sides', 'side'), ('drinks', 'drink')):
+        if plural not in raw_data:
+            continue
+
+        if singular in raw_data or f'{singular}_quantity' in raw_data:
+            raise serializers.ValidationError({
+                plural: 'روش قدیمی و جدید انتخاب را هم‌زمان ارسال نکنید.'
+            })
+
+        seen = set()
+        for entry in attrs.get(plural, []):
+            product_id = entry[singular].pk
+            if product_id in seen:
+                raise serializers.ValidationError({
+                    plural: 'هر محصول فقط یک بار قابل انتخاب است؛ تعداد را افزایش دهید.'
+                })
+            seen.add(product_id)
+
+    return attrs
+
+
 class ReservationInputSerializer(serializers.Serializer):
+    sides = ReservationSideInputSerializer(many=True, required=False)
+    drinks = ReservationDrinkInputSerializer(many=True, required=False)
     menu = serializers.PrimaryKeyRelatedField(queryset=Menu.objects.select_related('food').all())
     building = serializers.PrimaryKeyRelatedField(queryset=Building.objects.filter(is_active=True))
     food_quantity = serializers.IntegerField(min_value=1, default=1)
@@ -79,6 +113,10 @@ class ReservationInputSerializer(serializers.Serializer):
     side_quantity = serializers.IntegerField(min_value=1, required=False, default=1)
     drink = serializers.PrimaryKeyRelatedField(queryset=Drink.objects.all(), required=False, allow_null=True)
     drink_quantity = serializers.IntegerField(min_value=1, required=False, default=1)
+
+    def to_internal_value(self, data):
+        attrs = super().to_internal_value(data)
+        return validate_catalog_selections(attrs, data)
 
     def validate(self, attrs):
         if attrs.get('side') is None:
@@ -93,6 +131,8 @@ class ReservationBatchInputSerializer(serializers.Serializer):
 
 
 class ReservationRevisionInputSerializer(serializers.Serializer):
+    sides = ReservationSideInputSerializer(many=True, required=False)
+    drinks = ReservationDrinkInputSerializer(many=True, required=False)
     building = serializers.PrimaryKeyRelatedField(
         queryset=Building.objects.filter(is_active=True),
         required=False,
@@ -104,7 +144,30 @@ class ReservationRevisionInputSerializer(serializers.Serializer):
     drink_quantity = serializers.IntegerField(min_value=1, required=False)
 
 
+    def to_internal_value(self, data):
+        attrs = super().to_internal_value(data)
+        return validate_catalog_selections(attrs, data)
+
+
+class ReservationSideItemSerializer(serializers.Serializer):
+    side = serializers.IntegerField(source='side_id', read_only=True)
+    side_name = serializers.CharField(source='side.name', read_only=True)
+    quantity = serializers.IntegerField(read_only=True)
+    unit_price = serializers.IntegerField(read_only=True)
+    total_price = serializers.IntegerField(read_only=True)
+
+
+class ReservationDrinkItemSerializer(serializers.Serializer):
+    drink = serializers.IntegerField(source='drink_id', read_only=True)
+    drink_name = serializers.CharField(source='drink.name', read_only=True)
+    quantity = serializers.IntegerField(read_only=True)
+    unit_price = serializers.IntegerField(read_only=True)
+    total_price = serializers.IntegerField(read_only=True)
+
+
 class ReservationItemSerializer(serializers.ModelSerializer):
+    side_items = ReservationSideItemSerializer(many=True, read_only=True)
+    drink_items = ReservationDrinkItemSerializer(many=True, read_only=True)
     side_name = serializers.CharField(source='side.name', read_only=True, allow_null=True)
     drink_name = serializers.CharField(source='drink.name', read_only=True, allow_null=True)
     total_price = serializers.IntegerField(read_only=True)
@@ -115,6 +178,8 @@ class ReservationItemSerializer(serializers.ModelSerializer):
             'id',
             'building',
             'building_number_snapshot',
+            'side_items',
+            'drink_items',
             'side',
             'side_name',
             'drink',

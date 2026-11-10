@@ -134,6 +134,388 @@ class ReservationAPITests(TestCase):
             [False, False, False, True],
         )
 
+    def test_create_reservation_with_multiple_sides_and_drinks(self):
+        salad = Side.objects.create(name='Salad', price=200_000)
+        yogurt = Side.objects.create(name='Yogurt', price=100_000)
+        doogh = Drink.objects.create(name='Doogh', price=150_000)
+        cola = Drink.objects.create(name='Cola', price=120_000)
+
+        response = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                    'food_quantity': 1,
+                    'sides': [
+                        {'side': salad.pk, 'quantity': 2},
+                        {'side': yogurt.pk, 'quantity': 1},
+                    ],
+                    'drinks': [
+                        {'drink': doogh.pk, 'quantity': 3},
+                        {'drink': cola.pk, 'quantity': 2},
+                    ],
+                }],
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+
+        reservation = Reservation.objects.get(
+            user=self.user,
+            menu=self.menu,
+        )
+        item = reservation.current_item
+
+        sides = {
+            row.side_id: (row.quantity, row.unit_price)
+            for row in item.side_items.all()
+        }
+        drinks = {
+            row.drink_id: (row.quantity, row.unit_price)
+            for row in item.drink_items.all()
+        }
+
+        self.assertEqual(sides, {
+            salad.pk: (2, 200_000),
+            yogurt.pk: (1, 100_000),
+        })
+        self.assertEqual(drinks, {
+            doogh.pk: (3, 150_000),
+            cola.pk: (2, 120_000),
+        })
+
+        self.assertEqual(item.total_price, 2_290_000)
+        self.assertEqual(reservation.total_price, 2_290_000)
+
+        payload = response.json()[0]['current_item']
+        self.assertEqual(len(payload['side_items']), 2)
+        self.assertEqual(len(payload['drink_items']), 2)
+        self.assertEqual(payload['total_price'], 2_290_000)
+
+    def test_edit_multiselect_replaces_items_and_preserves_history(self):
+        salad = Side.objects.create(name='Salad', price=200_000)
+        yogurt = Side.objects.create(name='Yogurt', price=100_000)
+        doogh = Drink.objects.create(name='Doogh', price=150_000)
+
+        created = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                    'sides': [
+                        {'side': salad.pk, 'quantity': 2},
+                        {'side': yogurt.pk, 'quantity': 1},
+                    ],
+                    'drinks': [
+                        {'drink': doogh.pk, 'quantity': 1},
+                    ],
+                }],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+
+        reservation_id = created.json()[0]['id']
+        reservation = Reservation.objects.get(pk=reservation_id)
+        previous = reservation.current_item
+
+        self.assertEqual(previous.side_items.count(), 2)
+        self.assertEqual(previous.drink_items.count(), 1)
+
+        edited = self.client.patch(
+            reverse('reservation-detail', kwargs={'pk': reservation_id}),
+            {
+                'sides': [],
+                'drinks': [
+                    {'drink': doogh.pk, 'quantity': 3},
+                ],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(edited.status_code, 200, edited.content)
+
+        reservation.refresh_from_db()
+        current = reservation.current_item
+
+        self.assertNotEqual(previous.pk, current.pk)
+        previous.refresh_from_db()
+        self.assertFalse(previous.is_current)
+        self.assertTrue(current.is_current)
+
+        self.assertEqual(current.side_items.count(), 0)
+
+        drink_rows = list(current.drink_items.all())
+        self.assertEqual(len(drink_rows), 1)
+        self.assertEqual(drink_rows[0].drink_id, doogh.pk)
+        self.assertEqual(drink_rows[0].quantity, 3)
+        self.assertEqual(drink_rows[0].unit_price, 150_000)
+
+        self.assertEqual(current.total_price, 1_550_000)
+
+        previous.refresh_from_db()
+        self.assertEqual(previous.side_items.count(), 2)
+        self.assertEqual(previous.drink_items.count(), 1)
+        self.assertEqual(previous.total_price, 1_750_000)
+
+    def test_multiselect_cancel_and_restore_reprices_items(self):
+        salad = Side.objects.create(name='Salad', price=200_000)
+        doogh = Drink.objects.create(name='Doogh', price=150_000)
+
+        created = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                    'sides': [{'side': salad.pk, 'quantity': 2}],
+                    'drinks': [{'drink': doogh.pk, 'quantity': 2}],
+                }],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+
+        reservation_id = created.json()[0]['id']
+        reservation = Reservation.objects.get(pk=reservation_id)
+        initial = reservation.current_item
+
+        self.assertEqual(initial.total_price, 1_800_000)
+
+        cancelled = self.client.post(
+            reverse('reservation-cancel', kwargs={'pk': reservation_id}),
+        )
+        self.assertEqual(cancelled.status_code, 200, cancelled.content)
+        self.assertEqual(cancelled.json()['total_price'], 0)
+
+        cancelled_item = reservation.current_item
+        self.assertTrue(cancelled_item.is_cancelled)
+        self.assertEqual(cancelled_item.total_price, 0)
+
+        cancelled_side = cancelled_item.side_items.get(side=salad)
+        cancelled_drink = cancelled_item.drink_items.get(drink=doogh)
+
+        self.assertEqual(
+            (cancelled_side.quantity, cancelled_side.unit_price),
+            (2, 200_000),
+        )
+        self.assertEqual(
+            (cancelled_drink.quantity, cancelled_drink.unit_price),
+            (2, 150_000),
+        )
+
+        self.food.price = 2_000_000
+        self.food.save(update_fields=('price', 'datetime_modified'))
+        salad.price = 300_000
+        salad.save(update_fields=('price', 'datetime_modified'))
+        doogh.price = 250_000
+        doogh.save(update_fields=('price', 'datetime_modified'))
+
+        restored = self.client.patch(
+            reverse('reservation-detail', kwargs={'pk': reservation_id}),
+            {'food_quantity': 1},
+            content_type='application/json',
+        )
+        self.assertEqual(restored.status_code, 200, restored.content)
+
+        reservation.refresh_from_db()
+        current = reservation.current_item
+
+        self.assertEqual(reservation.status, Reservation.Status.RESERVED)
+        self.assertFalse(current.is_cancelled)
+        self.assertEqual(current.food_price, 2_100_000)
+        self.assertEqual(current.total_price, 3_200_000)
+
+        restored_side = current.side_items.get(side=salad)
+        restored_drink = current.drink_items.get(drink=doogh)
+
+        self.assertEqual(
+            (restored_side.quantity, restored_side.unit_price),
+            (2, 300_000),
+        )
+        self.assertEqual(
+            (restored_drink.quantity, restored_drink.unit_price),
+            (2, 250_000),
+        )
+
+        initial.refresh_from_db()
+        cancelled_item.refresh_from_db()
+
+        self.assertFalse(initial.is_current)
+        self.assertFalse(cancelled_item.is_current)
+        self.assertTrue(current.is_current)
+        self.assertEqual(reservation.items.count(), 3)
+
+        self.assertEqual(initial.total_price, 1_800_000)
+        self.assertEqual(cancelled_item.food_price, 1_100_000)
+        self.assertEqual(
+            cancelled_item.side_items.get(side=salad).unit_price,
+            200_000,
+        )
+        self.assertEqual(
+            cancelled_item.drink_items.get(drink=doogh).unit_price,
+            150_000,
+        )
+
+    def test_legacy_side_removal_clears_multiselect_rows(self):
+        side = Side.objects.create(name='Salad', price=200_000)
+
+        created = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                    'side': side.pk,
+                }],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+
+        reservation_id = created.json()[0]['id']
+        reservation = Reservation.objects.get(pk=reservation_id)
+        initial = reservation.current_item
+
+        self.assertEqual(initial.side_items.count(), 1)
+
+        edited = self.client.patch(
+            reverse('reservation-detail', kwargs={'pk': reservation_id}),
+            {'side': None},
+            content_type='application/json',
+        )
+        self.assertEqual(edited.status_code, 200, edited.content)
+
+        current = reservation.current_item
+        initial.refresh_from_db()
+
+        self.assertNotEqual(initial.pk, current.pk)
+        self.assertFalse(initial.is_current)
+        self.assertIsNone(current.side)
+        self.assertEqual(current.side_items.count(), 0)
+        self.assertEqual(current.total_price, 1_100_000)
+
+        self.assertEqual(initial.side_items.count(), 1)
+        self.assertEqual(initial.total_price, 1_300_000)
+
+    def test_legacy_drink_removal_clears_multiselect_rows(self):
+        drink = Drink.objects.create(name='Doogh Legacy', price=150_000)
+
+        created = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                    'drink': drink.pk,
+                }],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+
+        reservation_id = created.json()[0]['id']
+        reservation = Reservation.objects.get(pk=reservation_id)
+        initial = reservation.current_item
+
+        edited = self.client.patch(
+            reverse('reservation-detail', kwargs={'pk': reservation_id}),
+            {'drink': None},
+            content_type='application/json',
+        )
+        self.assertEqual(edited.status_code, 200, edited.content)
+
+        current = reservation.current_item
+        initial.refresh_from_db()
+
+        self.assertFalse(initial.is_current)
+        self.assertEqual(initial.drink_items.count(), 1)
+        self.assertEqual(current.drink_items.count(), 0)
+        self.assertEqual(current.total_price, 1_100_000)
+
+    def test_legacy_side_replaces_multiple_sides(self):
+        salad = Side.objects.create(name='Salad Multi', price=200_000)
+        yogurt = Side.objects.create(name='Yogurt Multi', price=100_000)
+
+        created = self.client.post(
+            reverse('reservation-list'),
+            {
+                'reservations': [{
+                    'menu': self.menu.pk,
+                    'building': self.building.pk,
+                    'sides': [
+                        {'side': salad.pk, 'quantity': 2},
+                        {'side': yogurt.pk, 'quantity': 1},
+                    ],
+                }],
+            },
+            content_type='application/json',
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+
+        reservation_id = created.json()[0]['id']
+        reservation = Reservation.objects.get(pk=reservation_id)
+        initial = reservation.current_item
+
+        edited = self.client.patch(
+            reverse('reservation-detail', kwargs={'pk': reservation_id}),
+            {'side': yogurt.pk, 'side_quantity': 3},
+            content_type='application/json',
+        )
+        self.assertEqual(edited.status_code, 200, edited.content)
+
+        current = reservation.current_item
+        rows = list(current.side_items.all())
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].side_id, yogurt.pk)
+        self.assertEqual(rows[0].quantity, 3)
+        self.assertEqual(current.total_price, 1_400_000)
+
+        initial.refresh_from_db()
+        self.assertFalse(initial.is_current)
+        self.assertEqual(initial.side_items.count(), 2)
+
+    def test_multiselect_rejects_duplicate_and_mixed_side_inputs(self):
+        side = Side.objects.create(name='Duplicate Salad', price=200_000)
+
+        payloads = [
+            {
+                'side': side.pk,
+                'sides': [{'side': side.pk, 'quantity': 1}],
+            },
+            {
+                'sides': [
+                    {'side': side.pk, 'quantity': 1},
+                    {'side': side.pk, 'quantity': 2},
+                ],
+            },
+        ]
+
+        for payload in payloads:
+            with self.subTest(payload=payload):
+                response = self.client.post(
+                    reverse('reservation-list'),
+                    {
+                        'reservations': [{
+                            'menu': self.menu.pk,
+                            'building': self.building.pk,
+                            **payload,
+                        }],
+                    },
+                    content_type='application/json',
+                )
+
+                self.assertEqual(response.status_code, 400)
+                self.assertFalse(
+                    Reservation.objects.filter(
+                        user=self.user,
+                        menu=self.menu,
+                    ).exists()
+                )
+
     def test_create_reservation_with_building(self):
         response = self.client.post(
             reverse('reservation-list'),

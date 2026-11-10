@@ -171,9 +171,57 @@ class ReservationItem(TimestampedModel):
             return 0
         return (
             self.food_price * self.food_quantity
-            + self.side_price * self.side_quantity
-            + self.drink_price * self.drink_quantity
+            + sum(item.total_price for item in self.side_items.all())
+            + sum(item.total_price for item in self.drink_items.all())
         )
 
     def __str__(self) -> str:
         return f'{self.reservation} (revision {self.pk})'
+
+
+class ReservationSideItem(TimestampedModel):
+    reservation_item = models.ForeignKey(ReservationItem,on_delete=models.PROTECT,related_name='side_items')
+    side = models.ForeignKey(Side, on_delete=models.PROTECT, related_name='reservation_side_items')
+
+    quantity = models.PositiveIntegerField()
+    unit_price = models.PositiveBigIntegerField()
+
+    class Meta:
+        constraints: ClassVar[list] = [
+            models.UniqueConstraint(
+                fields=('reservation_item', 'side'),
+                name='unique_side_per_revision',
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__gte=1),
+                name='reservation_side_quantity_positive',
+            ),
+        ]
+
+    @property
+    def total_price(self) -> int:
+        return self.quantity * self.unit_price
+
+
+class ReservationDrinkItem(TimestampedModel):
+    reservation_item = models.ForeignKey(ReservationItem,on_delete=models.PROTECT,related_name='drink_items')
+    drink = models.ForeignKey(Drink, on_delete=models.PROTECT, related_name='reservation_drink_items')
+
+    quantity = models.PositiveIntegerField()
+    unit_price = models.PositiveBigIntegerField()
+
+    class Meta:
+        constraints: ClassVar[list] = [
+            models.UniqueConstraint(
+                fields=('reservation_item', 'drink'),
+                name='unique_drink_per_revision',
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__gte=1),
+                name='reservation_drink_quantity_positive',
+            ),
+        ]
+
+    @property
+    def total_price(self) -> int:
+        return self.quantity * self.unit_price
