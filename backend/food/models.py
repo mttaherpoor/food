@@ -120,6 +120,18 @@ class Reservation(TimestampedModel):
 
 class ReservationItem(TimestampedModel):
     reservation = models.ForeignKey(Reservation, on_delete=models.PROTECT, related_name='items')
+    building = models.ForeignKey(
+        'core.Building',
+        on_delete=models.PROTECT,
+        related_name='reservation_items',
+        null=True,
+        blank=True,
+    )
+    building_number_snapshot = models.CharField(
+        max_length=3,
+        null=True,
+        blank=True,
+    )
     side = models.ForeignKey(Side, on_delete=models.PROTECT, related_name='reservation_items', null=True, blank=True)
     drink = models.ForeignKey(Drink, on_delete=models.PROTECT, related_name='reservation_items', null=True, blank=True)
     food_price = models.PositiveBigIntegerField(verbose_name='food price snapshot (Toman)')

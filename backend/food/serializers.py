@@ -1,8 +1,9 @@
+from rest_framework import serializers
+
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from rest_framework import serializers
-
+from core.models import Building
 from food.models import Drink, Food, Menu, MenuStatus, Reservation, ReservationItem, Side
 
 
@@ -71,6 +72,7 @@ class DailyReportSerializer(serializers.Serializer):
 
 class ReservationInputSerializer(serializers.Serializer):
     menu = serializers.PrimaryKeyRelatedField(queryset=Menu.objects.select_related('food').all())
+    building = serializers.PrimaryKeyRelatedField(queryset=Building.objects.filter(is_active=True))
     food_quantity = serializers.IntegerField(min_value=1, default=1)
     side = serializers.PrimaryKeyRelatedField(queryset=Side.objects.all(), required=False, allow_null=True)
     side_quantity = serializers.IntegerField(min_value=1, required=False, default=1)
@@ -90,6 +92,10 @@ class ReservationBatchInputSerializer(serializers.Serializer):
 
 
 class ReservationRevisionInputSerializer(serializers.Serializer):
+    building = serializers.PrimaryKeyRelatedField(
+        queryset=Building.objects.filter(is_active=True),
+        required=False,
+    )
     food_quantity = serializers.IntegerField(min_value=1, required=False)
     side = serializers.PrimaryKeyRelatedField(queryset=Side.objects.all(), required=False, allow_null=True)
     side_quantity = serializers.IntegerField(min_value=1, required=False)
@@ -106,6 +112,8 @@ class ReservationItemSerializer(serializers.ModelSerializer):
         model = ReservationItem
         fields = (
             'id',
+            'building',
+            'building_number_snapshot',
             'side',
             'side_name',
             'drink',
@@ -166,7 +174,5 @@ class WeeklyMenuSerializer(serializers.ModelSerializer):
 
     def get_can_reserve(self, menu):
         tehran = ZoneInfo('Asia/Tehran')
-        cutoff = datetime.combine(
-            menu.date - timedelta(days=1), time(hour=10), tzinfo=tehran
-        )
+        cutoff = datetime.combine(menu.date - timedelta(days=1), time(hour=10), tzinfo=tehran)
         return menu.status == MenuStatus.AVAILABLE and datetime.now(tehran) < cutoff

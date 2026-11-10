@@ -6,7 +6,21 @@ from django.utils import timezone
 from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from core.models import Building
 from food.models import Drink, Menu, MenuStatus, Reservation, ReservationItem, Side
+
+
+def validate_reservation_building(building: Building | None) -> Building:
+    if building is None:
+        raise ValidationError({'building': 'انتخاب ساختمان الزامی است.'})
+
+    if not isinstance(building, Building):
+        raise ValidationError({'building': 'ساختمان انتخاب‌شده معتبر نیست.'})
+
+    if not Building.objects.filter(pk=building.pk, is_active=True).exists():
+        raise ValidationError({'building': 'ساختمان انتخاب‌شده فعال یا معتبر نیست.'})
+
+    return building
 
 
 def _tehran_now():
@@ -42,6 +56,8 @@ def _create_revision(reservation: Reservation, data: dict, *, cancelled: bool = 
 
     return ReservationItem.objects.create(
         reservation=reservation,
+        building=data.get('building'),
+        building_number_snapshot=data.get('building_number_snapshot'),
         side=side,
         drink=drink,
         food_price=menu.food_price,
@@ -73,8 +89,14 @@ def create_reservations(user, rows: list[dict], *, cutoff_hour: int) -> list[Res
             raise ValidationError({'menu': 'این منو برای رزرو در دسترس نیست.'})
         if Reservation.objects.filter(user=user, menu=menu).exists():
             raise ValidationError({'menu': f'برای تاریخ {menu.date} قبلاً رزرو ثبت شده است.'})
+        building = validate_reservation_building(row.get('building'))
+        revision_data = {
+            **row,
+            'building': building,
+            'building_number_snapshot': building.number,
+        }
         reservation = Reservation.objects.create(user=user, menu=menu)
-        _create_revision(reservation, row)
+        _create_revision(reservation, revision_data)
         results.append(reservation)
     return results
 
@@ -108,7 +130,21 @@ def revise_reservation(
         raise ValidationError({'side_quantity': 'برای تعیین تعداد، ابتدا ساید را انتخاب کنید.'})
     if 'drink_quantity' in data and drink is None and data['drink_quantity'] > 0:
         raise ValidationError({'drink_quantity': 'برای تعیین تعداد، ابتدا نوشیدنی را انتخاب کنید.'})
+    if cancelled:
+        building = previous.building
+        building_number_snapshot = previous.building_number_snapshot
+    elif 'building' in data:
+        building = validate_reservation_building(data['building'])
+        building_number_snapshot = building.number
+    else:
+        building = previous.building
+        building_number_snapshot = previous.building_number_snapshot
+        if building is None:
+            raise ValidationError({'building': 'انتخاب ساختمان الزامی است.'})
+
     revision_data = {
+        'building': building,
+        'building_number_snapshot': building_number_snapshot,
         'food_quantity': data.get('food_quantity', previous.food_quantity),
         'side': side,
         'side_quantity': side_quantity,
