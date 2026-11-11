@@ -6,7 +6,7 @@ from io import StringIO
 from openpyxl import Workbook
 import pytest
 
-from core.models import CustomUser
+from core.models import Building, CustomUser, Department
 
 
 def _save_employee_workbook(path, rows):
@@ -26,6 +26,22 @@ def _save_employee_workbook(path, rows):
     workbook.save(path)
 
 
+
+@pytest.fixture(autouse=True)
+def employee_reference_data(db):
+    for number in ('01', '02'):
+        Building.objects.get_or_create(
+            number=number,
+            defaults={'is_active': True},
+        )
+
+    for number in ('100', '200'):
+        Department.objects.get_or_create(
+            number=number,
+            defaults={'is_active': True},
+        )
+
+
 @pytest.mark.django_db
 def test_import_employees_creates_accounts_with_initial_password(tmp_path):
     path = tmp_path / 'employees.xlsx'
@@ -43,7 +59,7 @@ def test_import_employees_creates_accounts_with_initial_password(tmp_path):
     sara = CustomUser.objects.get(username='001002')
     assert ali.check_password('001001')
     assert ali.must_change_password is True
-    assert ali.profile.building_number == '01'
+    assert ali.profile.building.number == '01'
     assert ali.first_name == ''
     assert ali.last_name == ''
     assert sara.is_active is False

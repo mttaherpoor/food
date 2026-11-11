@@ -3,7 +3,7 @@ from django.urls import reverse
 
 import pytest
 
-from core.models import CustomUser
+from core.models import Building, CustomUser, Department
 from core.roles import HR_FOOD_ROLE
 from core.services import create_employee
 from food.models import Food, MenuStatus
@@ -93,6 +93,15 @@ def test_catalog_rejects_negative_price(client):
 
 @pytest.mark.django_db
 def test_employee_can_read_catalog_but_cannot_manage_it(client):
+    Building.objects.get_or_create(
+        number='07',
+        defaults={'is_active': True},
+    )
+    Department.objects.get_or_create(
+        number='003',
+        defaults={'is_active': True},
+    )
+
     employee = create_employee(
         personnel_number='001234',
         building_number='07',

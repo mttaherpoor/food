@@ -275,11 +275,242 @@ class ManagementReportTests(TestCase):
         sheet = workbook.active
         rows = list(sheet.values)
 
+        from food.jalali import format_jalali_date
+
         self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[1][1], 'Excel Multi Food')
-        self.assertEqual(rows[1][2], 1)
-        self.assertEqual(rows[1][4], 2)
-        self.assertEqual(rows[1][5], 3_050_000)
+        self.assertEqual(rows[0][:7], (
+            'روز شمسی',
+            'شماره ساختمان',
+            'کد پرسنلی',
+            'شماره دپارتمان',
+            'نام غذا',
+            'تعداد غذا',
+            'قیمت واحد غذا با ظرف (تومان)',
+        ))
+        self.assertEqual(rows[1], (
+            format_jalali_date(date(2099, 2, 3)),
+            None,
+            'report-excel',
+            '003',
+            'Excel Multi Food',
+            2,
+            1_100_000,
+            'Excel Doogh',
+            3,
+            150_000,
+            'Excel Salad',
+            2,
+            200_000,
+            3_050_000,
+        ))
+
+        workbook.close()
+
+    def test_excel_export_sorting_multiselect_and_snapshots(self):
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        from food.jalali import format_jalali_date
+
+        viewer = create_user_in_group('viewer-excel-detail', VIEWER_ROLE)
+
+        building_02, _ = Building.objects.get_or_create(
+            number='02',
+            defaults={'is_active': True},
+        )
+        building_07 = Building.objects.get(number='07')
+
+        food = Food.objects.create(
+            name='Detailed Excel Food',
+            price=1_000_000,
+            container_price=100_000,
+        )
+        first_day = Menu.objects.create(
+            date=date(2099, 3, 1),
+            food=food,
+        )
+        second_day = Menu.objects.create(
+            date=date(2099, 3, 2),
+            food=food,
+        )
+
+        employees = {
+            number: create_employee(
+                personnel_number=number,
+                building_number='07',
+                department_number='003',
+            )
+            for number in ('0010', '0002', '0001', '0099')
+        }
+
+        def reserve(number, menu, building, snapshot):
+            reservation = Reservation.objects.create(
+                user=employees[number],
+                menu=menu,
+            )
+            item = ReservationItem.objects.create(
+                reservation=reservation,
+                building=building,
+                building_number_snapshot=snapshot,
+                food_price=1_100_000,
+                food_quantity=2,
+            )
+            return reservation, item
+
+        # Deliberately create records in an order different
+        # from the required Excel sorting order.
+        _, later_item = reserve(
+            '0001', second_day, building_02, '02',
+        )
+        _, high_number_item = reserve(
+            '0010', first_day, building_07, '07',
+        )
+        _, low_number_item = reserve(
+            '0002', first_day, building_07, '07',
+        )
+
+        # The snapshot must win over the employee's profile
+        # and the referenced Building when applicable.
+        low_number_item.building_number_snapshot = '02'
+        low_number_item.save(
+            update_fields=['building_number_snapshot'],
+        )
+
+        # A historical revision must never be exported.
+        ReservationItem.objects.filter(
+            pk=high_number_item.pk,
+        ).update(is_current=False)
+        ReservationItem.objects.create(
+            reservation=high_number_item.reservation,
+            building=building_07,
+            building_number_snapshot='07',
+            food_price=1_100_000,
+            food_quantity=2,
+            is_current=True,
+        )
+
+        # A cancelled reservation must not appear.
+        cancelled = Reservation.objects.create(
+            user=employees['0099'],
+            menu=first_day,
+            status=Reservation.Status.CANCELLED,
+        )
+        ReservationItem.objects.create(
+            reservation=cancelled,
+            building=building_07,
+            building_number_snapshot='07',
+            food_price=1_100_000,
+            is_cancelled=True,
+        )
+
+        drink_1 = Drink.objects.create(
+            name='Drink A',
+            price=900_000,
+        )
+        drink_2 = Drink.objects.create(
+            name='Drink B',
+            price=900_000,
+        )
+        side_1 = Side.objects.create(
+            name='Side A',
+            price=900_000,
+        )
+        side_2 = Side.objects.create(
+            name='Side B',
+            price=900_000,
+        )
+
+        for drink, quantity, price in (
+            (drink_1, 2, 150_000),
+            (drink_2, 1, 120_000),
+        ):
+            ReservationDrinkItem.objects.create(
+                reservation_item=low_number_item,
+                drink=drink,
+                quantity=quantity,
+                unit_price=price,
+            )
+
+        for side, quantity, price in (
+            (side_1, 3, 100_000),
+            (side_2, 1, 200_000),
+        ):
+            ReservationSideItem.objects.create(
+                reservation_item=low_number_item,
+                side=side,
+                quantity=quantity,
+                unit_price=price,
+            )
+
+        # Change catalog prices after reservation snapshots.
+        # The exported values must remain unchanged.
+        food.price = 9_000_000
+        food.save(update_fields=['price', 'datetime_modified'])
+
+        self.client.force_login(viewer)
+        response = self.client.get(
+            reverse('daily-report-export'),
+            {'from': '2099-03-01', 'to': '2099-03-02'},
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+
+        workbook = load_workbook(BytesIO(response.content))
+        sheet = workbook.active
+        rows = list(sheet.values)
+
+        # Header + exactly three active current reservations.
+        self.assertEqual(len(rows), 4)
+        self.assertEqual(sheet.freeze_panes, 'A2')
+        self.assertTrue(sheet.sheet_view.rightToLeft)
+
+        self.assertEqual(
+            [(row[0], row[1], row[2]) for row in rows[1:]],
+            [
+                (format_jalali_date(first_day.date), '02', '0002'),
+                (format_jalali_date(first_day.date), '07', '0010'),
+                (format_jalali_date(second_day.date), '02', '0001'),
+            ],
+        )
+
+        headers = rows[0]
+        first = rows[1]
+
+        self.assertEqual(first[3], '003')
+        self.assertEqual(first[4], 'Detailed Excel Food')
+        self.assertEqual(first[5], 2)
+        self.assertEqual(first[6], 1_100_000)
+
+        self.assertEqual(
+            first[7:13],
+            ('Drink A', 2, 150_000, 'Drink B', 1, 120_000),
+        )
+        self.assertEqual(
+            first[13:19],
+            ('Side A', 3, 100_000, 'Side B', 1, 200_000),
+        )
+        self.assertEqual(headers[-1], 'قیمت کل (تومان)')
+
+        expected_total = (
+            2 * 1_100_000
+            + 2 * 150_000
+            + 1 * 120_000
+            + 3 * 100_000
+            + 1 * 200_000
+        )
+        self.assertEqual(first[-1], expected_total)
+
+        # The identifiers must remain text to preserve leading zeros.
+        for column in (2, 3, 4):
+            self.assertEqual(sheet.cell(2, column).data_type, 's')
+            self.assertEqual(
+                sheet.cell(2, column).number_format,
+                '@',
+            )
+
+        # Unused optional columns remain blank.
+        self.assertEqual(rows[2][7:19], (None,) * 12)
 
         workbook.close()
 

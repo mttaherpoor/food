@@ -242,36 +242,226 @@ class DailyReportViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['get'], url_path='export')
     def export(self, request):
-        """Export the same authorized report as XLSX with Jalali date text."""
-        data = self._report_data(request)
+        """Export active reservation details with Jalali dates to XLSX."""
+        start_date = parse_date(request.query_params.get('from', ''))
+        end_date = parse_date(request.query_params.get('to', ''))
+
+        if start_date is None or end_date is None:
+            raise ValidationError({
+                'date_range': 'پارامترهای from و to با قالب YYYY-MM-DD الزامی‌اند.'
+            })
+        if end_date < start_date:
+            raise ValidationError({
+                'to': 'تاریخ پایان نباید قبل از تاریخ شروع باشد.'
+            })
+
+        current_items = (
+            ReservationItem.objects.filter(
+                is_current=True,
+                is_cancelled=False,
+            )
+            .select_related('building')
+            .prefetch_related('side_items__side', 'drink_items__drink')
+        )
+
+        reservations = (
+            Reservation.objects.filter(
+                menu__date__range=(start_date, end_date),
+                status=Reservation.Status.RESERVED,
+            )
+            .select_related('menu__food', 'user__profile__department')
+            .prefetch_related(
+                Prefetch(
+                    'items',
+                    queryset=current_items,
+                    to_attr='export_current_items',
+                )
+            )
+        )
+
+        def identifier_sort(value):
+            text = str(value or '')
+            if not text:
+                return (2, '', '')
+            if text.isdecimal():
+                return (0, int(text), text)
+            return (1, text, '')
+
+        records = []
+
+        for reservation in reservations:
+            profile = getattr(reservation.user, 'profile', None)
+            personnel = (
+                profile.personnel_number
+                if profile is not None
+                else reservation.user.username
+            )
+            department = (
+                profile.department.number
+                if profile is not None and profile.department_id
+                else ''
+            )
+
+            for item in reservation.export_current_items:
+                building = (
+                    item.building_number_snapshot
+                    or (item.building.number if item.building_id else '')
+                )
+
+                drinks = sorted(item.drink_items.all(), key=lambda x: x.pk)
+                sides = sorted(item.side_items.all(), key=lambda x: x.pk)
+
+                records.append({
+                    'date': reservation.menu.date,
+                    'building': str(building),
+                    'personnel': str(personnel),
+                    'department': str(department),
+                    'food': reservation.menu.food.name,
+                    'quantity': item.food_quantity,
+                    'food_unit_price': item.food_price,
+                    'drinks': drinks,
+                    'sides': sides,
+                    'total': item.total_price,
+                })
+
+        records.sort(
+            key=lambda row: (
+                row['date'],
+                identifier_sort(row['building']),
+                identifier_sort(row['personnel']),
+            )
+        )
+
+        max_drinks = max(
+            (len(row['drinks']) for row in records),
+            default=0,
+        )
+        max_sides = max(
+            (len(row['sides']) for row in records),
+            default=0,
+        )
+
+        headers = [
+            'روز شمسی',
+            'شماره ساختمان',
+            'کد پرسنلی',
+            'شماره دپارتمان',
+            'نام غذا',
+            'تعداد غذا',
+            'قیمت واحد غذا با ظرف (تومان)',
+        ]
+
+        for index in range(1, max_drinks + 1):
+            headers.extend([
+                f'نوشیدنی {index}',
+                f'تعداد نوشیدنی {index}',
+                f'قیمت واحد نوشیدنی {index} (تومان)',
+            ])
+
+        for index in range(1, max_sides + 1):
+            headers.extend([
+                f'پیش‌غذا {index}',
+                f'تعداد پیش‌غذا {index}',
+                f'قیمت واحد پیش‌غذا {index} (تومان)',
+            ])
+
+        headers.append('قیمت کل (تومان)')
+
         workbook = Workbook()
         sheet = workbook.active
-        sheet.title = 'گزارش روزانه'
+        sheet.title = 'جزئیات رزرو'
         sheet.sheet_view.rightToLeft = True
-        headers = ['تاریخ شمسی', 'غذا', 'تعداد رزرو', 'تعداد لغو', 'تعداد غذا', 'جمع (تومان)']
-        sheet.append(headers)
-        for row in data:
-            sheet.append([
-                format_jalali_date(row['date']), row['food'], row['reserved_count'],
-                row['cancelled_count'], row['food_quantity'], row['total_toman'],
-            ])
         sheet.freeze_panes = 'A2'
-        sheet.auto_filter.ref = sheet.dimensions
+        sheet.append(headers)
+
+        for record in records:
+            values = [
+                format_jalali_date(record['date']),
+                record['building'],
+                record['personnel'],
+                record['department'],
+                record['food'],
+                record['quantity'],
+                record['food_unit_price'],
+            ]
+
+            for index in range(max_drinks):
+                if index < len(record['drinks']):
+                    item = record['drinks'][index]
+                    values.extend([
+                        item.drink.name,
+                        item.quantity,
+                        item.unit_price,
+                    ])
+                else:
+                    values.extend([None, None, None])
+
+            for index in range(max_sides):
+                if index < len(record['sides']):
+                    item = record['sides'][index]
+                    values.extend([
+                        item.side.name,
+                        item.quantity,
+                        item.unit_price,
+                    ])
+                else:
+                    values.extend([None, None, None])
+
+            values.append(record['total'])
+            sheet.append(values)
+
+            row_number = sheet.max_row
+            for column in (1, 2, 3, 4):
+                cell = sheet.cell(row_number, column)
+                cell.number_format = '@'
+                cell.data_type = 's'
+
+            # Keep user-entered product names as text, never formulas.
+            for cell in sheet[row_number]:
+                if isinstance(cell.value, str) and cell.value.startswith('='):
+                    cell.data_type = 's'
+
         for cell in sheet[1]:
-            cell.font = Font(bold=True, color='FFFFFF')
-            cell.fill = PatternFill('solid', fgColor='206C80')
-            cell.alignment = Alignment(horizontal='center')
-        for column, width in {'A': 18, 'B': 30, 'C': 16, 'D': 16, 'E': 16, 'F': 22}.items():
-            sheet.column_dimensions[column].width = width
+            cell.fill = PatternFill(
+                'solid',
+                fgColor='176477',
+            )
+            cell.font = Font(color='FFFFFF', bold=True)
+            cell.alignment = Alignment(
+                horizontal='center',
+                vertical='center',
+            )
+
+        sheet.row_dimensions[1].height = 28
+        sheet.auto_filter.ref = sheet.dimensions
+
+        for column in sheet.columns:
+            first = column[0]
+            width = min(
+                42,
+                max(16, len(str(first.value or '')) + 6),
+            )
+            sheet.column_dimensions[first.column_letter].width = width
+
         for row in sheet.iter_rows(min_row=2):
-            row[0].number_format = '@'
-            for cell in row[2:]:
-                cell.number_format = '#,##0'
+            for cell in row:
+                cell.alignment = Alignment(
+                    horizontal='right',
+                    vertical='center',
+                )
+
         output = BytesIO()
         workbook.save(output)
+        workbook.close()
+
         response = HttpResponse(
             output.getvalue(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            content_type=(
+                'application/vnd.openxmlformats-officedocument.'
+                'spreadsheetml.sheet'
+            ),
         )
-        response['Content-Disposition'] = 'attachment; filename="food-daily-report-jalali.xlsx"'
+        response['Content-Disposition'] = (
+            'attachment; filename="food-daily-report.xlsx"'
+        )
         return response

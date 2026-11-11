@@ -72,7 +72,7 @@ export default function ReportPage() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'food-daily-report-jalali.xlsx'
+      link.download = 'food-daily-report.xlsx'
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -86,7 +86,7 @@ export default function ReportPage() {
       <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0"><legend className="mb-2 text-sm font-semibold text-ink">از تاریخ</legend><JalaliDatePicker onChange={setFromDate} required value={fromDate} /></fieldset>
       <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0"><legend className="mb-2 text-sm font-semibold text-ink">تا تاریخ</legend><JalaliDatePicker onChange={setToDate} required value={toDate} /></fieldset>
       <button className={buttonClass('primary', '')} disabled={loading} type="submit">{loading ? 'در حال دریافت…' : 'نمایش گزارش'}</button>
-      <button className={buttonClass('neutral', '')} onClick={() => void downloadReport()} type="button">خروجی Excel (شمسی)</button>
+      <button className={buttonClass('neutral', '')} onClick={() => void downloadReport()} type="button">خروجی Excel</button>
     </form>
     {error && <ErrorMessage message={error} onRetry={() => void loadReport()} />}
     {loaded && !error && <>
