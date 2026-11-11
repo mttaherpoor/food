@@ -59,14 +59,21 @@ export default function CatalogMultiSelect({
             return (
               <div
                 key={item.id}
-                className="flex min-w-0 items-center gap-3 py-3"
+                className="flex min-w-0 items-center gap-2 py-3 sm:gap-3"
               >
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-raised">
+                <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-raised sm:h-14 sm:w-14">
                   {imageUrl ? (
                     <img
                       src={imageUrl}
                       alt={item.image_data.alt}
                       loading="lazy"
+                      onError={(event) => {
+                        const image = event.currentTarget
+                        image.onerror = null
+                        image.src = label.includes('نوشیدنی')
+                          ? '/static/images/defaults/default-drink.webp'
+                          : '/static/images/defaults/default-side.webp'
+                      }}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -86,13 +93,13 @@ export default function CatalogMultiSelect({
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                   <button
                     type="button"
                     aria-label={`کاهش ${label} ${item.name}`}
                     disabled={disabled || quantity === 0}
                     onClick={() => updateQuantity(item.id, quantity - 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-white text-ink disabled:opacity-40"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line bg-white text-ink hover:bg-raised disabled:opacity-40"
                   >
                     <Minus size={15} aria-hidden="true" />
                   </button>
@@ -109,7 +116,7 @@ export default function CatalogMultiSelect({
                     aria-label={`افزودن ${label} ${item.name}`}
                     disabled={disabled || quantity >= 99}
                     onClick={() => updateQuantity(item.id, quantity + 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-white text-ink disabled:opacity-40"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line bg-white text-ink hover:bg-raised disabled:opacity-40"
                   >
                     <Plus size={15} aria-hidden="true" />
                   </button>
