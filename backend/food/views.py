@@ -78,7 +78,12 @@ class ReservationViewSet(viewsets.ModelViewSet):
         return (
             Reservation.objects.filter(user=self.request.user)
             .select_related('menu__food', 'user')
-            .prefetch_related('items__side', 'items__drink')
+            .prefetch_related(
+                'items__side',
+                'items__drink',
+                'items__side_items__side',
+                'items__drink_items__drink',
+            )
         )
 
     def create(self, request, *args, **kwargs):
