@@ -16,3 +16,13 @@ secrets/*.txt
 !secrets/*.example.txt
 
 frontend/.pnpm-store/
+
+# Django uploaded media
+/media/**
+!/media/.gitkeep
+!/media/foods/
+!/media/foods/.gitkeep
+!/media/sides/
+!/media/sides/.gitkeep
+!/media/drinks/
+!/media/drinks/.gitkeep
