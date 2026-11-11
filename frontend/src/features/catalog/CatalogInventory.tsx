@@ -90,11 +90,13 @@ export default function CatalogInventory({
     try {
       let body: BodyInit
 
-      if (kind === 'foods' && imageFile) {
+      if (imageFile) {
         const formData = new FormData()
         formData.append('name', name.trim())
         formData.append('price', String(priceValue))
-        formData.append('container_price', String(containerValue))
+        if (kind === 'foods') {
+          formData.append('container_price', String(containerValue))
+        }
         formData.append('image', imageFile)
         body = formData
       } else {
@@ -254,9 +256,22 @@ export default function CatalogInventory({
                             </label>
 
                             {kind === 'foods' && (
-                              <div className="grid min-w-0 gap-3 rounded-xl border border-line bg-raised p-3 sm:col-span-2">
+                              <label className="grid gap-2 text-sm">
+                                قیمت ظرف (تومان)
+                                <input
+                                  className="min-h-11 rounded-lg border border-line px-3"
+                                  type="number"
+                                  min={0}
+                                  required
+                                  value={containerPrice}
+                                  onChange={(event) => setContainerPrice(event.target.value)}
+                                />
+                              </label>
+                            )}
+
+                            <div className="grid min-w-0 gap-3 rounded-xl border border-line bg-raised p-3 sm:col-span-2">
                                 <span className="text-sm font-semibold text-ink">
-                                  تصویر غذا
+                                  تصویر {kind === 'foods' ? 'غذا' : kind === 'sides' ? 'پیش‌غذا' : 'نوشیدنی'}
                                 </span>
 
                                 <div className="flex flex-wrap items-center gap-4">
@@ -292,21 +307,6 @@ export default function CatalogInventory({
                                   </div>
                                 </div>
                               </div>
-                            )}
-
-                            {kind === 'foods' && (
-                              <label className="grid gap-2 text-sm">
-                                قیمت ظرف (تومان)
-                                <input
-                                  className="min-h-11 rounded-lg border border-line px-3"
-                                  type="number"
-                                  min={0}
-                                  required
-                                  value={containerPrice}
-                                  onChange={(event) => setContainerPrice(event.target.value)}
-                                />
-                              </label>
-                            )}
 
                             <div className="flex items-end">
                               <button

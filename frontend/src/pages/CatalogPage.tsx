@@ -1,7 +1,7 @@
 import FoodPicker from '../components/ui/FoodPicker'
 import CatalogInventory from '../features/catalog/CatalogInventory'
 import { RefreshCw } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../api/client'
 import type { CatalogItem } from '../api/types'
@@ -21,6 +21,12 @@ export default function CatalogPage() {
   const [foodName, setFoodName] = useState('')
   const [foodPrice, setFoodPrice] = useState('')
   const [containerPrice, setContainerPrice] = useState('')
+  const [foodImage, setFoodImage] = useState<File | null>(null)
+  const [foodImagePreview, setFoodImagePreview] = useState<string | null>(null)
+  const foodImageInputRef = useRef<HTMLInputElement>(null)
+  const [itemImage, setItemImage] = useState<File | null>(null)
+  const [itemImagePreview, setItemImagePreview] = useState<string | null>(null)
+  const itemImageInputRef = useRef<HTMLInputElement>(null)
   const [menuDate, setMenuDate] = useState(dateToIso(addDays(new Date(), 1)))
   const [selectedFood, setSelectedFood] = useState('')
   const [kind, setKind] = useState<CatalogKind>('sides')
@@ -30,6 +36,18 @@ export default function CatalogPage() {
   const [editNotice, setEditNotice] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    return () => {
+      if (foodImagePreview) URL.revokeObjectURL(foodImagePreview)
+    }
+  }, [foodImagePreview])
+
+  useEffect(() => {
+    return () => {
+      if (itemImagePreview) URL.revokeObjectURL(itemImagePreview)
+    }
+  }, [itemImagePreview])
 
   const loadCatalog = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -83,10 +101,31 @@ export default function CatalogPage() {
     setError('')
     setNotice('')
     try {
+      const formData = new FormData()
+      formData.append('name', foodName.trim())
+      formData.append('price', String(Number(foodPrice)))
+      formData.append('container_price', String(Number(containerPrice)))
+
+      if (foodImage) {
+        formData.append('image', foodImage)
+      }
+
       const created = await api<CatalogItem & { container_price: number }>('/foods', {
-        method: 'POST', body: JSON.stringify({ name: foodName.trim(), price: Number(foodPrice), container_price: Number(containerPrice) }),
+        method: 'POST',
+        body: formData,
       })
-      setFoodName(''); setFoodPrice(''); setContainerPrice(''); setNotice('غذا به کاتالوگ اضافه شد.')
+
+      setFoodName('')
+      setFoodPrice('')
+      setContainerPrice('')
+      setFoodImage(null)
+      setFoodImagePreview(null)
+
+      if (foodImageInputRef.current) {
+        foodImageInputRef.current.value = ''
+      }
+
+      setNotice('غذا به کاتالوگ اضافه شد.')
       await loadCatalog()
       setSelectedFood(created.id.toString())
     } catch (saveError) { setError(getApiMessage(saveError)) }
@@ -98,8 +137,31 @@ export default function CatalogPage() {
     setNotice('')
     const endpoint = kind === 'sides' ? '/sides' : '/drinks'
     try {
-      await api(endpoint, { method: 'POST', body: JSON.stringify({ name: itemName.trim(), price: Number(itemPrice) }) })
-      setItemName(''); setItemPrice(''); setNotice(kind === 'sides' ? 'ساید اضافه شد.' : 'نوشیدنی اضافه شد.')
+      let body: BodyInit = JSON.stringify({
+        name: itemName.trim(),
+        price: Number(itemPrice),
+      })
+
+      if (itemImage) {
+        const formData = new FormData()
+        formData.append('name', itemName.trim())
+        formData.append('price', String(Number(itemPrice)))
+        formData.append('image', itemImage)
+        body = formData
+      }
+
+      await api(endpoint, { method: 'POST', body })
+
+      setItemName('')
+      setItemPrice('')
+      setItemImage(null)
+      setItemImagePreview(null)
+
+      if (itemImageInputRef.current) {
+        itemImageInputRef.current.value = ''
+      }
+
+      setNotice(kind === 'sides' ? 'پیش‌غذا اضافه شد.' : 'نوشیدنی اضافه شد.')
       await loadCatalog()
     } catch (saveError) { setError(getApiMessage(saveError)) }
   }
@@ -135,7 +197,60 @@ export default function CatalogPage() {
         <div className="grid grid-cols-1 gap-3 bg-[#f4f8f9] p-4">
       <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] bg-white">
   <summary className="cursor-pointer border-b border-[#dce7ea] bg-[#edf3f5] px-5 py-4 text-sm font-semibold text-[#274d59] hover:bg-[#e1edf1]">افزودن غذا</summary>
-<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن غذا</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createFood(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0 col-span-full">نام غذا<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" onChange={(event) => setFoodName(event.target.value)} required value={foodName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">قیمت غذا (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setFoodPrice(event.target.value)} required type="number" value={foodPrice} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">قیمت ظرف (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setContainerPrice(event.target.value)} required type="number" value={containerPrice} /></label><button className={buttonClass('primary', 'col-span-full')} type="submit">افزودن غذا</button></form></section></div>
+<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن غذا</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createFood(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0 col-span-full">نام غذا<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" onChange={(event) => setFoodName(event.target.value)} required value={foodName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">قیمت غذا (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setFoodPrice(event.target.value)} required type="number" value={foodPrice} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">قیمت ظرف (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setContainerPrice(event.target.value)} required type="number" value={containerPrice} /></label>
+<div className="col-span-full grid min-w-0 gap-3 rounded-xl border border-line bg-[#f4f8f9] p-3">
+  <label
+    htmlFor="new-food-image"
+    className="text-sm font-semibold text-[#34393c]"
+  >
+    تصویر غذا (اختیاری)
+  </label>
+
+  <input
+    ref={foodImageInputRef}
+    id="new-food-image"
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    className="block w-full min-w-0 rounded-lg border border-line bg-white p-2 text-sm text-ink file:me-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#e4f0f3] file:px-3 file:py-2"
+    onChange={(event) => {
+      const file = event.target.files?.[0] ?? null
+      setFoodImage(file)
+      setFoodImagePreview(file ? URL.createObjectURL(file) : null)
+    }}
+  />
+
+  {foodImagePreview && (
+    <div className="flex flex-wrap items-center gap-3">
+      <img
+        src={foodImagePreview}
+        alt="پیش‌نمایش تصویر غذای جدید"
+        className="h-28 w-28 rounded-xl border border-line bg-white object-cover"
+      />
+
+      <button
+        type="button"
+        className="min-h-10 rounded-lg border border-line bg-white px-4 text-sm"
+        onClick={() => {
+          setFoodImage(null)
+          setFoodImagePreview(null)
+          if (foodImageInputRef.current) {
+            foodImageInputRef.current.value = ''
+          }
+        }}
+      >
+        حذف تصویر انتخاب‌شده
+      </button>
+    </div>
+  )}
+
+  <p className="m-0 text-xs text-muted">
+    فرمت‌های مجاز: JPG، PNG و WebP. بدون انتخاب عکس، تصویر پیش‌فرض غذا نمایش داده می‌شود.
+  </p>
+</div>
+
+<button className={buttonClass('primary', 'col-span-full')} type="submit">
+  افزودن غذا
+</button></form></section></div>
 </details>
       <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] bg-white">
   <summary className="cursor-pointer border-b border-[#dce7ea] bg-[#edf3f5] px-5 py-4 text-sm font-semibold text-[#274d59] hover:bg-[#e1edf1]">ثبت منوی روز</summary>
@@ -143,7 +258,59 @@ export default function CatalogPage() {
 </details>
       <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] bg-white">
   <summary className="cursor-pointer border-b border-[#dce7ea] bg-[#edf3f5] px-5 py-4 text-sm font-semibold text-[#274d59] hover:bg-[#e1edf1]">افزودن گزینهٔ جانبی</summary>
-<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن گزینهٔ جانبی</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createCatalogItem(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">نوع گزینه<select className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" onChange={(event) => setKind(event.target.value as CatalogKind)} value={kind}><option value="sides">ساید</option><option value="drinks">نوشیدنی</option></select></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">نام<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" onChange={(event) => setItemName(event.target.value)} required value={itemName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0 col-span-full">قیمت (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setItemPrice(event.target.value)} required type="number" value={itemPrice} /></label><button className={buttonClass('primary', 'col-span-full')} type="submit">افزودن گزینه</button></form></section></div>
+<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن گزینهٔ جانبی</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createCatalogItem(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">نوع گزینه<select className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" onChange={(event) => setKind(event.target.value as CatalogKind)} value={kind}><option value="sides">پیش‌غذا</option><option value="drinks">نوشیدنی</option></select></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0">نام<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" onChange={(event) => setItemName(event.target.value)} required value={itemName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] !m-0 col-span-full">قیمت (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setItemPrice(event.target.value)} required type="number" value={itemPrice} /></label>
+<div className="col-span-full grid min-w-0 gap-3 rounded-xl border border-line bg-[#f4f8f9] p-3">
+  <label
+    htmlFor="new-catalog-item-image"
+    className="text-sm font-semibold text-[#34393c]"
+  >
+    تصویر {kind === 'sides' ? 'پیش‌غذا' : 'نوشیدنی'} (اختیاری)
+  </label>
+
+  <input
+    ref={itemImageInputRef}
+    id="new-catalog-item-image"
+    type="file"
+    accept="image/jpeg,image/png,image/webp"
+    className="block w-full min-w-0 rounded-lg border border-line bg-white p-2 text-sm text-ink file:me-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#e4f0f3] file:px-3 file:py-2"
+    onChange={(event) => {
+      const file = event.target.files?.[0] ?? null
+      setItemImage(file)
+      setItemImagePreview(file ? URL.createObjectURL(file) : null)
+    }}
+  />
+
+  {itemImagePreview && (
+    <div className="flex flex-wrap items-center gap-3">
+      <img
+        src={itemImagePreview}
+        alt="پیش‌نمایش تصویر گزینه جانبی"
+        className="h-28 w-28 rounded-xl border border-line bg-white object-cover"
+      />
+      <button
+        type="button"
+        className="min-h-10 rounded-lg border border-line bg-white px-4 text-sm"
+        onClick={() => {
+          setItemImage(null)
+          setItemImagePreview(null)
+          if (itemImageInputRef.current) {
+            itemImageInputRef.current.value = ''
+          }
+        }}
+      >
+        حذف تصویر انتخاب‌شده
+      </button>
+    </div>
+  )}
+
+  <p className="m-0 text-xs text-muted">
+    JPG، PNG یا WebP؛ بدون تصویر، عکس پیش‌فرض نمایش داده می‌شود.
+  </p>
+</div>
+
+<button className={buttonClass('primary', 'col-span-full')} type="submit">
+  افزودن گزینه
+</button></form></section></div>
 </details>
       </div>
       </details>
@@ -178,7 +345,7 @@ function CatalogSummary({ foods, sides, drinks }: { foods: CatalogItem[]; sides:
       <h2 className="m-0 text-base">کاتالوگ موجود</h2>
       <div className="flex flex-wrap gap-[18px] text-[13px] text-muted max-[680px]:gap-3">
         <span>غذا <strong className="ms-[5px] text-ink">{foods.length}</strong></span>
-        <span>ساید <strong className="ms-[5px] text-ink">{sides.length}</strong></span>
+        <span>پیش‌غذا <strong className="ms-[5px] text-ink">{sides.length}</strong></span>
         <span>نوشیدنی <strong className="ms-[5px] text-ink">{drinks.length}</strong></span>
       </div>
     </section>
