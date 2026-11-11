@@ -9,9 +9,43 @@ export type User = {
   roles: string[]
 }
 
-export type CatalogItem = { id: number; name: string; price: number }
+export type ImageData = {
+  url: string
+  alt: string
+}
+
+export type CatalogSelection = {
+  id: number
+  quantity: number
+}
+
+export type ReservationSideItem = {
+  side: number
+  side_name: string
+  quantity: number
+  unit_price: number
+  total_price: number
+}
+
+export type ReservationDrinkItem = {
+  drink: number
+  drink_name: string
+  quantity: number
+  unit_price: number
+  total_price: number
+}
+
+export type CatalogItem = {
+  id: number
+  name: string
+  price: number
+  image: string | null
+  image_data: ImageData
+}
 
 export type ReservationItem = {
+  side_items: ReservationSideItem[]
+  drink_items: ReservationDrinkItem[]
   id: number
   building: number | null
   building_number_snapshot: string | null
@@ -44,6 +78,8 @@ export type Reservation = {
 }
 
 export type WeeklyMenu = {
+  food_image: string | null
+  food_image_data: ImageData
   id: number
   date: string
   food_name: string
