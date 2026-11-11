@@ -96,6 +96,8 @@ function ReservationVersion({
         </div>
       ) : (
         <div className="mt-3 grid gap-3 rounded-xl bg-raised p-3 text-xs">
+        {!item.is_current && (
+          <>
         <div className="flex flex-wrap justify-between gap-2">
           <span className="text-muted">ساختمان تحویل</span>
           <strong className="text-ink">
@@ -115,6 +117,9 @@ function ReservationVersion({
             {formatMoney(item.food_price * item.food_quantity)}
           </strong>
         </div>
+
+          </>
+        )}
 
         {sides.length > 0 && (
           <div className="grid gap-2 border-t border-line pt-3">
@@ -171,6 +176,132 @@ function ReservationVersion({
   )
 }
 
+type MonthGroup = {
+  key: number
+  label: string
+  reservations: Reservation[]
+  foodCount: number
+  foodAmount: number
+  sideAmount: number
+  drinkAmount: number
+  totalAmount: number
+}
+
+const monthKeyFormatter = new Intl.DateTimeFormat(
+  'en-US-u-ca-persian',
+  { year: 'numeric', month: 'numeric' },
+)
+
+const monthLabelFormatter = new Intl.DateTimeFormat(
+  'fa-IR-u-ca-persian',
+  { year: 'numeric', month: 'long' },
+)
+
+function dateFromIso(value: string): Date {
+  return new Date(`${value}T12:00:00`)
+}
+
+function monthInfo(date: string) {
+  const value = dateFromIso(date)
+  const parts = monthKeyFormatter.formatToParts(value)
+
+  const year = Number(parts.find((part) => part.type === 'year')?.value)
+  const month = Number(parts.find((part) => part.type === 'month')?.value)
+
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    throw new Error('Invalid Persian calendar date')
+  }
+
+  return {
+    key: year * 100 + month,
+    label: monthLabelFormatter.format(value),
+  }
+}
+
+function productTotal(
+  item: ReservationItem,
+  category: 'side' | 'drink',
+): number {
+  const entries = category === 'side'
+    ? item.side_items
+    : item.drink_items
+
+  if (entries != null) {
+    return entries.reduce((sum, entry) => sum + entry.total_price, 0)
+  }
+
+  return category === 'side' ? item.side_price : item.drink_price
+}
+
+function groupByPersianMonth(reservations: Reservation[]): MonthGroup[] {
+  const groups = new Map<number, MonthGroup>()
+
+  const sorted = [...reservations].sort(
+    (a, b) =>
+      b.menu_date.localeCompare(a.menu_date) ||
+      b.id - a.id,
+  )
+
+  for (const reservation of sorted) {
+    const { key, label } = monthInfo(reservation.menu_date)
+
+    let group = groups.get(key)
+
+    if (!group) {
+      group = {
+        key,
+        label,
+        reservations: [],
+        foodCount: 0,
+        foodAmount: 0,
+        sideAmount: 0,
+        drinkAmount: 0,
+        totalAmount: 0,
+      }
+      groups.set(key, group)
+    }
+
+    group.reservations.push(reservation)
+
+    const item = reservation.current_item
+
+    if (
+      reservation.status !== 'res' ||
+      !item ||
+      item.is_cancelled
+    ) {
+      continue
+    }
+
+    group.foodCount += item.food_quantity
+    group.foodAmount += item.food_price * item.food_quantity
+    group.sideAmount += productTotal(item, 'side')
+    group.drinkAmount += productTotal(item, 'drink')
+    group.totalAmount += reservation.total_price
+  }
+
+  return Array.from(groups.values()).sort((a, b) => b.key - a.key)
+}
+
+function MonthlyMetric({
+  label,
+  value,
+  count = false,
+}: {
+  label: string
+  value: number
+  count?: boolean
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="text-xs text-muted">{label}</div>
+      <strong className="mt-1 block whitespace-nowrap text-sm font-semibold text-ink">
+        {count ? numberFormatter.format(value) : formatMoney(value)}
+      </strong>
+    </div>
+  )
+}
+
 export default function HistoryPage() {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
@@ -195,6 +326,8 @@ export default function HistoryPage() {
     }
   }, [])
 
+  const months = groupByPersianMonth(reservations)
+
   return (
     <section className="min-w-0" aria-labelledby="history-title">
       <header className="mb-6">
@@ -208,7 +341,7 @@ export default function HistoryPage() {
           سوابق رزرو
         </h1>
         <p className="mt-2 text-sm leading-7 text-muted">
-          جزئیات رزروها و نسخه‌های قبلی با قیمت ثبت‌شده
+          خلاصه ماهانه و جزئیات رزروها با قیمت‌های ثبت‌شده
         </p>
       </header>
 
@@ -216,61 +349,139 @@ export default function HistoryPage() {
 
       {loading ? (
         <LoadingRows />
-      ) : reservations.length === 0 && !error ? (
+      ) : months.length === 0 && !error ? (
         <EmptyState
           title="هنوز رزروی ثبت نکرده‌ای"
           detail="از صفحه رزرو هفته می‌توانی غذای روزها را انتخاب کنی."
         />
       ) : (
-        <div className="divide-y divide-line border-t border-line">
-          {reservations.map((reservation) => (
-            <article
-              className="min-w-0 py-5"
-              key={reservation.id}
+        <div className="grid gap-4">
+          {months.map((month) => (
+            <details
+              className="group min-w-0 overflow-hidden rounded-2xl border border-line bg-white"
+              key={month.key}
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-col gap-2">
-                  <span className="text-xs text-muted">
-                    {formatDate(reservation.menu_date)}
-                  </span>
+              <summary
+                aria-label="باز کردن خلاصه ماه"
+                className="cursor-pointer list-none p-4 marker:hidden sm:p-5 [&::-webkit-details-marker]:hidden"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="m-0 text-lg font-bold text-ink">
+                      {month.label}
+                    </h2>
+                    <p className="mt-1 mb-0 text-xs text-muted">
+                      {numberFormatter.format(
+                        month.reservations.filter(
+                          (reservation) =>
+                            reservation.status === 'res' &&
+                            reservation.current_item != null &&
+                            !reservation.current_item.is_cancelled &&
+                            reservation.total_price > 0,
+                        ).length,
+                      )} رزرو فعال
+                    </p>
+                  </div>
 
-                  <strong className="text-base text-ink">
-                    {reservation.food_name}
-                  </strong>
+                  <div className="min-w-0 text-end">
+                    <p className="m-0 text-xs text-muted">جمع کل ماه</p>
+                    <strong className="mt-1 block whitespace-nowrap text-sm font-bold text-ink sm:text-base">
+                      {formatMoney(month.totalAmount)}
+                    </strong>
+                  </div>
+                </div>
+              </summary>
 
-                  <span className={
-                    reservation.status === 'res'
-                      ? 'text-xs font-semibold text-positive'
-                      : 'text-xs font-semibold text-muted'
-                  }>
-                    {reservation.status === 'res'
-                      ? 'رزرو فعال'
-                      : 'لغو شده'}
-                  </span>
+              <div className="border-t border-line px-4 py-4 sm:px-5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="min-w-0 text-center">
+                    <MonthlyMetric
+                      label="غذا"
+                      value={month.foodAmount}
+                    />
+                  </div>
+
+                  <div className="min-w-0 border-s border-line ps-3 text-center">
+                    <MonthlyMetric
+                      label="مخلفات"
+                      value={month.sideAmount + month.drinkAmount}
+                    />
+                  </div>
                 </div>
 
-                <strong className="whitespace-nowrap text-sm text-ink">
-                  {formatMoney(reservation.total_price)}
-                </strong>
+                <details className="mt-4 border-t border-line pt-3">
+                  <summary className="cursor-pointer py-2 text-center text-xs font-semibold text-accent">
+                    مشاهده رزروهای ماه
+                  </summary>
+
+                  <div className="divide-y divide-line">
+                {month.reservations.map((reservation) => (
+                  <article
+                    className="min-w-0 py-5"
+                    key={reservation.id}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="flex min-w-0 flex-col gap-2">
+                        <span className="text-xs text-muted">
+                          {formatDate(reservation.menu_date)}
+                        </span>
+                        <strong className="text-sm text-ink">
+                          {reservation.food_name}
+                        </strong>
+                        <span className={
+                          reservation.status === 'res'
+                            ? 'text-xs font-semibold text-positive'
+                            : 'text-xs font-semibold text-muted'
+                        }>
+                          {reservation.status === 'res'
+                            ? 'رزرو فعال'
+                            : 'لغو شده'}
+                        </span>
+                      </div>
+
+                      <div className="flex min-w-0 flex-col items-start gap-2">
+                        <strong className="whitespace-nowrap text-sm text-ink">
+                          {formatMoney(reservation.total_price)}
+                        </strong>
+
+                        {reservation.status === 'res' &&
+                          reservation.current_item &&
+                          !reservation.current_item.is_cancelled && (
+                            <div className="grid gap-1 rounded-lg bg-raised px-3 py-2 text-xs text-muted">
+                              <span>
+                                ساختمان {reservation.current_item.building_number_snapshot
+                                  ?? reservation.current_item.building
+                                  ?? 'ثبت‌نشده'}
+                              </span>
+                              <span>
+                                غذای اصلی: {formatMoney(
+                                  reservation.current_item.food_price *
+                                  reservation.current_item.food_quantity,
+                                )}
+                              </span>
+                            </div>
+                          )}
+                      </div>
+                    </div>
+
+                    <details className="mt-3 rounded-xl border border-line px-3 py-3">
+                      <summary className="cursor-pointer text-sm font-semibold text-accent">
+                        جزئیات و سوابق (
+                        {numberFormatter.format(reservation.history.length)} نسخه)
+                      </summary>
+
+                      <ol className="m-0 mt-3 list-none p-0">
+                        {reservation.history.map((item) => (
+                          <ReservationVersion item={item} key={item.id} />
+                        ))}
+                      </ol>
+                    </details>
+                  </article>
+                ))}
+                  </div>
+                </details>
               </div>
-
-              <details className="mt-4 rounded-xl border border-line px-4 py-3">
-                <summary className="cursor-pointer text-sm font-semibold text-accent">
-                  جزئیات و سوابق ({numberFormatter.format(
-                    reservation.history.length,
-                  )} نسخه)
-                </summary>
-
-                <ol className="m-0 mt-3 list-none p-0">
-                  {reservation.history.map((item) => (
-                    <ReservationVersion
-                      item={item}
-                      key={item.id}
-                    />
-                  ))}
-                </ol>
-              </details>
-            </article>
+            </details>
           ))}
         </div>
       )}

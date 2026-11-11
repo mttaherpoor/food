@@ -92,6 +92,17 @@ describe('HistoryPage reservation snapshots', () => {
     expect(await screen.findByText('قورمه سبزی')).toBeInTheDocument()
     expect(screen.getByText('رزرو فعال')).toBeInTheDocument()
 
+    const monthSummary = screen.getByLabelText('باز کردن خلاصه ماه')
+    const monthDetails = monthSummary.closest('details')
+
+    expect(monthDetails).not.toHaveAttribute('open')
+
+    await user.click(monthSummary)
+
+    expect(monthDetails).toHaveAttribute('open')
+
+    await user.click(screen.getByText('مشاهده رزروهای ماه'))
+
     const details = screen.getByText(/جزئیات و سوابق/)
     await user.click(details)
 
@@ -102,7 +113,11 @@ describe('HistoryPage reservation snapshots', () => {
     expect(within(panel).getByText(/سالاد شیرازی ×/)).toBeInTheDocument()
     expect(within(panel).getByText(/ماست و موسیر ×/)).toBeInTheDocument()
     expect(within(panel).getByText(/نوشابه ×/)).toBeInTheDocument()
-    expect(within(panel).getByText('ساختمان 08')).toBeInTheDocument()
+    expect(screen.getByText('ساختمان 08')).toBeInTheDocument()
+    expect(screen.getByText(/غذای اصلی:.*۲۰۰/)).toBeInTheDocument()
+    expect(
+      within(panel).queryByText('ساختمان 08'),
+    ).not.toBeInTheDocument()
 
     expect(
       within(panel).queryByText('بدون پیش‌غذا و نوشیدنی'),
@@ -155,6 +170,16 @@ describe('HistoryPage reservation snapshots', () => {
     expect(await screen.findByText('زرشک پلو')).toBeInTheDocument()
     expect(screen.getByText('لغو شده')).toBeInTheDocument()
 
+    const monthSummary = screen.getByLabelText('باز کردن خلاصه ماه')
+    const monthDetails = monthSummary.closest('details')
+
+    expect(monthDetails).not.toHaveAttribute('open')
+
+    await user.click(monthSummary)
+
+    expect(monthDetails).toHaveAttribute('open')
+
+    await user.click(screen.getByText('مشاهده رزروهای ماه'))
     await user.click(screen.getByText(/جزئیات و سوابق/))
 
     expect(screen.getByText(/سالاد قدیمی ×/)).toBeInTheDocument()
