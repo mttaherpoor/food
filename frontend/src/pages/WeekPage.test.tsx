@@ -12,6 +12,11 @@ const menu: WeeklyMenu = {
   id: 101,
   date: dateToIso(getWeekStart(new Date())),
   food_name: 'غذای آزمایشی',
+  food_image: null,
+  food_image_data: {
+    url: '/static/images/defaults/default-food.webp',
+    alt: 'غذای آزمایشی',
+  },
   food_price: 100_000,
   reservation: null,
   can_reserve: true,
@@ -81,8 +86,8 @@ describe('ReservationDialog building selection', () => {
             menu: 101,
             building: 7,
             food_quantity: 1,
-            side: null,
-            drink: null,
+            sides: [],
+            drinks: [],
           },
         ],
       })
@@ -161,8 +166,8 @@ describe('ReservationDialog building selection', () => {
             menu: 101,
             building: 8,
             food_quantity: 1,
-            side: null,
-            drink: null,
+            sides: [],
+            drinks: [],
           },
         ],
       })
@@ -178,6 +183,8 @@ describe('ReservationDialog building selection', () => {
     const currentItem = {
       id: 501,
       building: 8,
+      side_items: [],
+      drink_items: [],
       building_number_snapshot: '08',
       side: null,
       side_name: null,
@@ -270,8 +277,8 @@ describe('ReservationDialog building selection', () => {
     await waitFor(() => {
       expect(submittedBody).toEqual({
         food_quantity: 2,
-        side: null,
-        drink: null,
+        sides: [],
+        drinks: [],
       })
     })
   })
@@ -284,6 +291,8 @@ describe('ReservationDialog building selection', () => {
     const historicalItem = {
       id: 601,
       building: null,
+      side_items: [],
+      drink_items: [],
       building_number_snapshot: null,
       side: null,
       side_name: null,
@@ -380,8 +389,8 @@ describe('ReservationDialog building selection', () => {
       expect(submittedBody).toEqual({
         building: 8,
         food_quantity: 1,
-        side: null,
-        drink: null,
+        sides: [],
+        drinks: [],
       })
     })
   })
@@ -393,6 +402,8 @@ describe('ReservationDialog building selection', () => {
     const currentItem = {
       id: 701,
       building: 8,
+      side_items: [],
+      drink_items: [],
       building_number_snapshot: '08',
       side: null,
       side_name: null,
@@ -485,8 +496,8 @@ describe('ReservationDialog building selection', () => {
     await waitFor(() => {
       expect(submittedBody).toEqual({
         food_quantity: 2,
-        side: null,
-        drink: null,
+        sides: [],
+        drinks: [],
       })
     })
   })
@@ -532,23 +543,24 @@ describe('ReservationDialog building selection', () => {
       await screen.findByRole('button', { name: 'انتخاب غذا' }),
     )
 
-    const sideSelect = await screen.findByRole('combobox', {
-      name: 'پیش‌غذا (اختیاری)',
-    })
-    const drinkSelect = screen.getByRole('combobox', {
-      name: 'نوشیدنی (اختیاری)',
-    })
-
-    await user.selectOptions(sideSelect, '11')
-    await user.selectOptions(drinkSelect, '21')
-
-    expect(
-      screen.getByRole('spinbutton', { name: 'تعداد پیش‌غذا' }),
-    ).toHaveValue(1)
+    await user.click(
+      await screen.findByRole('button', {
+        name: 'افزودن پیش‌غذا (اختیاری) سالاد',
+      }),
+    )
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزودن نوشیدنی (اختیاری) دوغ',
+      }),
+    )
 
     expect(
-      screen.getByRole('spinbutton', { name: 'تعداد نوشیدنی' }),
-    ).toHaveValue(1)
+      screen.getByLabelText('تعداد پیش‌غذا (اختیاری) سالاد'),
+    ).toHaveTextContent('1')
+
+    expect(
+      screen.getByLabelText('تعداد نوشیدنی (اختیاری) دوغ'),
+    ).toHaveTextContent('1')
 
     await user.click(
       screen.getByRole('button', { name: 'ثبت رزرو' }),
@@ -561,10 +573,8 @@ describe('ReservationDialog building selection', () => {
             menu: menu.id,
             building: 7,
             food_quantity: 1,
-            side: 11,
-            side_quantity: 1,
-            drink: 21,
-            drink_quantity: 1,
+            sides: [{ side: 11, quantity: 1 }],
+            drinks: [{ drink: 21, quantity: 1 }],
           },
         ],
       })

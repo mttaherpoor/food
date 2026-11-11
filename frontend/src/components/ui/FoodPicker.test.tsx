@@ -11,6 +11,11 @@ const foods = [
     price: 100000,
     container_price: 10000,
     total_price: 110000,
+    image: null,
+    image_data: {
+      url: '/static/images/defaults/default-food.webp',
+      alt: 'غذای آزمایشی',
+    },
   },
   {
     id: 2,
@@ -18,6 +23,11 @@ const foods = [
     price: 120000,
     container_price: 10000,
     total_price: 130000,
+    image: null,
+    image_data: {
+      url: '/static/images/defaults/default-food.webp',
+      alt: 'غذای آزمایشی',
+    },
   },
 ]
 

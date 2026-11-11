@@ -14,11 +14,41 @@ import type { CatalogItem, ProfileOption, Reservation, WeeklyMenu } from '../api
 import EmptyState from '../components/ui/EmptyState'
 import ErrorMessage from '../components/ui/ErrorMessage'
 import LoadingRows from '../components/ui/LoadingRows'
+import CatalogMultiSelect from '../components/ui/CatalogMultiSelect'
+import type { CatalogQuantities } from '../components/ui/CatalogMultiSelect'
 import QuantityField from '../components/ui/QuantityField'
 import { buttonClass, iconButtonClass } from '../components/ui/buttonStyles'
 import { addDays, dateToIso, formatDate, formatWeekday, getWeekStart } from '../utils/date'
 import { getApiMessage } from '../utils/errors'
 import { formatMoney } from '../utils/format'
+
+function initialQuantities(
+  entries: { id: number; quantity: number }[] | undefined,
+  legacyId: number | null | undefined,
+  legacyQuantity: number | undefined,
+): CatalogQuantities {
+  if (entries !== undefined) {
+    return Object.fromEntries(
+      entries.map((entry) => [entry.id, entry.quantity]),
+    )
+  }
+
+  if (legacyId != null && (legacyQuantity ?? 0) > 0) {
+    return { [legacyId]: legacyQuantity ?? 1 }
+  }
+
+  return {}
+}
+
+function selectionTotal(
+  items: CatalogItem[],
+  quantities: CatalogQuantities,
+): number {
+  return items.reduce(
+    (total, item) => total + item.price * (quantities[item.id] ?? 0),
+    0,
+  )
+}
 
 export default function WeekPage() {
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
@@ -155,10 +185,26 @@ function DayRow({ date, index, menu, onEdit }: { date: string; index: number; me
         {today && <span className="mt-[2px] self-start text-[11px] font-semibold text-accent max-[680px]:mt-0">امروز</span>}
       </div>
       <div className="flex min-w-0 flex-col gap-1 max-[680px]:col-start-1 max-[680px]:row-start-2">
-        {menu ? <>
-          <strong className="truncate text-sm max-[680px]:text-[13px]">{menu.food_name}</strong>
-          <span className="text-xs text-muted">{formatMoney(menu.food_price)}</span>
-        </> : <><strong className="truncate text-sm text-[#899094] max-[680px]:text-[13px]">منویی ثبت نشده</strong><span className="text-xs text-muted">برای این روز هنوز غذایی در برنامه نیست.</span></>}
+        {menu ? (
+          <div className="flex min-w-0 items-center gap-3">
+            {menu.food_image_data?.url && (
+              <img
+                src={menu.food_image_data.url}
+                alt={menu.food_image_data.alt}
+                loading="lazy"
+                className="h-14 w-14 shrink-0 rounded-lg object-cover"
+              />
+            )}
+            <div className="flex min-w-0 flex-col gap-1">
+              <strong className="truncate text-sm max-[680px]:text-[13px]">
+                {menu.food_name}
+              </strong>
+              <span className="text-xs text-muted">
+                {formatMoney(menu.food_price)}
+              </span>
+            </div>
+          </div>
+        ) : <><strong className="truncate text-sm text-[#899094] max-[680px]:text-[13px]">منویی ثبت نشده</strong><span className="text-xs text-muted">برای این روز هنوز غذایی در برنامه نیست.</span></>}
       </div>
       <div className="flex items-center gap-2 whitespace-nowrap text-xs text-[#555d61] max-[680px]:col-start-2 max-[680px]:row-start-1 max-[680px]:justify-self-end max-[680px]:text-[11px]">
         {activeReservation ? <>
@@ -203,11 +249,27 @@ function ReservationDialog({
   const [buildingOptions, setBuildingOptions] = useState<ProfileOption[]>([])
   const [buildingLoading, setBuildingLoading] = useState(true)
   const [buildingLoadError, setBuildingLoadError] = useState('')
-  const [side, setSide] = useState(current?.side?.toString() ?? '')
-  const [drink, setDrink] = useState(current?.drink?.toString() ?? '')
+  const [sideQuantities, setSideQuantities] = useState<CatalogQuantities>(() =>
+    initialQuantities(
+      current?.side_items?.map((entry) => ({
+        id: entry.side,
+        quantity: entry.quantity,
+      })),
+      current?.side,
+      current?.side_quantity,
+    ),
+  )
+  const [drinkQuantities, setDrinkQuantities] = useState<CatalogQuantities>(() =>
+    initialQuantities(
+      current?.drink_items?.map((entry) => ({
+        id: entry.drink,
+        quantity: entry.quantity,
+      })),
+      current?.drink,
+      current?.drink_quantity,
+    ),
+  )
   const [foodQuantity, setFoodQuantity] = useState(current?.food_quantity ?? 1)
-  const [sideQuantity, setSideQuantity] = useState(current?.side_quantity ?? 1)
-  const [drinkQuantity, setDrinkQuantity] = useState(current?.drink_quantity ?? 1)
   const [saving, setSaving] = useState(false)
   const [canceling, setCanceling] = useState(false)
   const [error, setError] = useState('')
@@ -342,8 +404,8 @@ function ReservationDialog({
   }, [])
 
   const total = menu.food_price * foodQuantity
-    + (sides.find((item) => item.id === Number(side))?.price ?? 0) * (side ? sideQuantity : 0)
-    + (drinks.find((item) => item.id === Number(drink))?.price ?? 0) * (drink ? drinkQuantity : 0)
+    + selectionTotal(sides, sideQuantities)
+    + selectionTotal(drinks, drinkQuantities)
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -369,10 +431,18 @@ function ReservationDialog({
           : { building: Number(building) }
       ),
       food_quantity: foodQuantity,
-      side: side ? Number(side) : null,
-      ...(side ? { side_quantity: sideQuantity } : {}),
-      drink: drink ? Number(drink) : null,
-      ...(drink ? { drink_quantity: drinkQuantity } : {}),
+      sides: Object.entries(sideQuantities)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([side, quantity]) => ({
+          side: Number(side),
+          quantity,
+        })),
+      drinks: Object.entries(drinkQuantities)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([drink, quantity]) => ({
+          drink: Number(drink),
+          quantity,
+        })),
     }
     try {
       if (menu.reservation) {
@@ -454,16 +524,20 @@ function ReservationDialog({
             </p>
           )}
           <QuantityField label="تعداد غذا" value={foodQuantity} onChange={setFoodQuantity} />
-          <CatalogSelect label="پیش‌غذا (اختیاری)" value={side} options={sides} onChange={(value) => {
-            setSide(value)
-            if (value && sideQuantity < 1) setSideQuantity(1)
-          }} />
-          {side && <QuantityField label="تعداد پیش‌غذا" value={sideQuantity} onChange={setSideQuantity} />}
-          <CatalogSelect label="نوشیدنی (اختیاری)" value={drink} options={drinks} onChange={(value) => {
-            setDrink(value)
-            if (value && drinkQuantity < 1) setDrinkQuantity(1)
-          }} />
-          {drink && <QuantityField label="تعداد نوشیدنی" value={drinkQuantity} onChange={setDrinkQuantity} />}
+          <CatalogMultiSelect
+            label="پیش‌غذا (اختیاری)"
+            items={sides}
+            quantities={sideQuantities}
+            onChange={setSideQuantities}
+            disabled={saving || canceling}
+          />
+          <CatalogMultiSelect
+            label="نوشیدنی (اختیاری)"
+            items={drinks}
+            quantities={drinkQuantities}
+            onChange={setDrinkQuantities}
+            disabled={saving || canceling}
+          />
           <div className="mt-1 flex justify-between gap-[10px] border-t border-line py-[11px] text-sm text-muted"><span>جمع این انتخاب</span><strong className="text-ink">{formatMoney(total)}</strong></div>
           {error && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a]" role="alert">{error}</p>}
           <button className={buttonClass('primary', 'w-full')} disabled={saving || canceling || buildingLoading || Boolean(buildingLoadError)} type="submit">{saving ? 'در حال ثبت…' : menu.reservation?.status === 'can' ? 'ثبت رزرو مجدد' : menu.reservation ? 'ذخیرهٔ ویرایش' : 'ثبت رزرو'}</button>
@@ -472,25 +546,5 @@ function ReservationDialog({
         </form>}
       </section>
     </div>
-  )
-}
-
-function CatalogSelect({ label, value, options, onChange }: { label: string; value: string; options: CatalogItem[]; onChange: (value: string) => void }) {
-  return (
-    <label className="m-0 flex flex-col gap-2 text-sm font-semibold text-[#34393c]">
-      {label}
-      <select
-        className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink"
-        onChange={(event) => onChange(event.target.value)}
-        value={value}
-      >
-        <option value="">انتخاب</option>
-        {options.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.name} · {formatMoney(item.price)}
-          </option>
-        ))}
-      </select>
-    </label>
   )
 }
