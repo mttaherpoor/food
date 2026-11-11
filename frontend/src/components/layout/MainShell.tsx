@@ -157,24 +157,31 @@ export default function MainShell({
       </aside>
       <header className="mobile-topbar sticky top-0 z-[5] hidden h-[58px] items-center gap-[10px] border-b border-line bg-white/95 px-4 backdrop-blur-md max-[680px]:flex">
         <BrandMark variant="mobile" />
-        <div
-          className="ms-auto flex min-w-0 flex-col items-start"
-          aria-label="هزینه رزروهای ماه جاری"
-        >
-          <span className="inline-flex items-center gap-1.5 text-[10px] text-muted">
-            <Wallet size={15} className="text-accent" aria-hidden="true" />
-            {walletMonth ?? 'ماه جاری'}
-          </span>
-          <strong
-            className="max-w-full truncate text-xs text-ink"
-            aria-live="polite"
+        <div className="ms-auto flex min-w-0 items-center gap-2.5">
+          <span
+            className="inline-flex min-w-0 items-center gap-1 text-[11px] text-ink"
+            aria-label="کد پرسنلی"
           >
-            {walletAmount}
-          </strong>
+            <UserRound size={13} className="shrink-0 text-accent" aria-hidden="true" />
+            <strong className="max-w-[72px] truncate" title={user.username}>
+              {user.username}
+            </strong>
+          </span>
+          <span
+            className="flex min-w-0 flex-col items-center gap-0.5 text-[10px] text-muted"
+            aria-label="هزینه رزروهای ماه جاری"
+          >
+            <span className="inline-flex items-center gap-1">
+              <Wallet size={13} className="shrink-0 text-accent" aria-hidden="true" />
+              <span className="max-w-[90px] truncate" aria-live="polite">
+                {walletAmount}
+              </span>
+            </span>
+            <span className="text-[9px] leading-none text-muted">
+              {walletMonth ?? 'ماه جاری'}
+            </span>
+          </span>
         </div>
-        <span className="hidden text-xs text-muted min-[500px]:inline">
-          {user.username}
-        </span>
         <button aria-label="خروج از حساب" className={iconButtonClass} onClick={onLogout} type="button"><LogOut size={18} /></button>
       </header>
       <main className={`min-h-svh ms-[236px] px-9 pb-12 max-[900px]:ms-[205px] max-[900px]:px-[23px] max-[680px]:ms-0 max-[680px]:min-h-0 max-[680px]:px-4 max-[680px]:pb-[93px] ${page === 'profile' ? 'min-[681px]:pb-3' : ''}`} id="main-content">
