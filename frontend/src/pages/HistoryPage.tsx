@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Download } from 'lucide-react'
 
-import { api } from '../api/client'
+import { api, apiClient } from '../api/client'
 import type { Reservation, ReservationItem } from '../api/types'
 import EmptyState from '../components/ui/EmptyState'
 import ErrorMessage from '../components/ui/ErrorMessage'
@@ -306,6 +307,7 @@ export default function HistoryPage() {
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -326,11 +328,56 @@ export default function HistoryPage() {
     }
   }, [])
 
+  async function downloadHistory() {
+    if (exporting) return
+
+    setExporting(true)
+
+    try {
+      const response = await apiClient.get<Blob>(
+        '/reservations/history-export',
+        { responseType: 'blob' },
+      )
+
+      const disposition = response.headers['content-disposition']
+
+      // Backend sends: attachment; filename="001004-1405-09.xlsx"
+      const filenameMatch = typeof disposition === 'string'
+        ? disposition.match(/filename="?([^";]+)"?/i)
+        : null
+
+      const filename = filenameMatch?.[1]?.trim()
+
+      // Accept only the agreed personnel ID + Jalali month format.
+      const safeFilename = filename &&
+        /^[a-zA-Z0-9_-]+-[0-9]{4}-(0[1-9]|1[0-2])\.xlsx$/.test(filename)
+        ? filename
+        : 'reservation-history.xlsx'
+
+      const objectUrl = URL.createObjectURL(response.data)
+      const anchor = document.createElement('a')
+
+      try {
+        anchor.href = objectUrl
+        anchor.download = safeFilename
+        document.body.appendChild(anchor)
+        anchor.click()
+        anchor.remove()
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+      }
+    } catch (downloadError) {
+      setError(getApiMessage(downloadError))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const months = groupByPersianMonth(reservations)
 
   return (
     <section className="min-w-0" aria-labelledby="history-title">
-      <header className="mb-6">
+      <header className="relative mb-6">
         <p className="mb-2 text-xs font-bold text-accent">
           حساب من
         </p>
@@ -343,6 +390,18 @@ export default function HistoryPage() {
         <p className="mt-2 text-sm leading-7 text-muted">
           خلاصه ماهانه و جزئیات رزروها با قیمت‌های ثبت‌شده
         </p>
+
+        <button
+          type="button"
+          aria-label="دانلود Excel تمام سوابق"
+          title="دانلود Excel تمام سوابق"
+          onClick={() => void downloadHistory()}
+          disabled={loading || exporting || reservations.length === 0}
+          className="absolute left-0 top-0 inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-accent shadow-sm transition-colors hover:bg-raised disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Download size={17} aria-hidden="true" />
+          <span>{exporting ? 'در حال دریافت...' : 'خروجی اکسل'}</span>
+        </button>
       </header>
 
       {error && <ErrorMessage message={error} />}

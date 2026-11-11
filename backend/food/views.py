@@ -15,6 +15,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 
 from core.permissions import HasChangedInitialPassword, IsCatalogReaderOrManager, IsHRFoodViewerOrSuperAdmin
+from food.history_excel import export_full_history
 from food.jalali import format_jalali_date
 from food.models import Drink, Food, Menu, Reservation, ReservationItem, Side
 from food.serializers import (
@@ -109,6 +110,26 @@ class ReservationViewSet(viewsets.ModelViewSet):
             cutoff_hour=RESERVATION_CUTOFF_HOUR,
         )
         return Response(self.get_serializer(self.get_object()).data)
+
+    @action(detail=False, methods=['get'], url_path='history-export')
+    def history_export(self, request):
+        from core.models import Profile
+
+        person_id = (
+            Profile.objects.filter(user=request.user)
+            .values_list('personnel_number', flat=True)
+            .first()
+        )
+
+        if not person_id:
+            raise ValidationError({
+                'personnel_number': 'کد پرسنلی کاربر ثبت نشده است.'
+            })
+
+        return export_full_history(
+            self.get_queryset(),
+            str(person_id),
+        )
 
     @action(detail=False, methods=['get'])
     def weekly(self, request):
