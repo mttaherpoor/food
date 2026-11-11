@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
 import type { CatalogItem } from '../../api/types'
 import { formatMoney } from '../../utils/format'
@@ -29,8 +29,17 @@ export default function CatalogInventory({
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [containerPrice, setContainerPrice] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  // Release temporary preview URLs after replacement or unmount.
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview)
+    }
+  }, [imagePreview])
 
   const sections: {
     kind: Kind
@@ -44,6 +53,8 @@ export default function CatalogInventory({
 
   function startEdit(kind: Kind, item: CatalogItem) {
     setEditing(`${kind}:${item.id}`)
+    setImageFile(null)
+    setImagePreview(null)
     setName(item.name)
     setPrice(String(item.price))
     setContainerPrice(
@@ -77,15 +88,28 @@ export default function CatalogInventory({
     setError('')
 
     try {
-      await api(`/${kind}/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
+      let body: BodyInit
+
+      if (kind === 'foods' && imageFile) {
+        const formData = new FormData()
+        formData.append('name', name.trim())
+        formData.append('price', String(priceValue))
+        formData.append('container_price', String(containerValue))
+        formData.append('image', imageFile)
+        body = formData
+      } else {
+        body = JSON.stringify({
           name: name.trim(),
           price: priceValue,
           ...(kind === 'foods'
             ? { container_price: containerValue }
             : {}),
-        }),
+        })
+      }
+
+      await api(`/${kind}/${id}`, {
+        method: 'PATCH',
+        body,
       })
 
       const itemType = kind === 'foods'
@@ -95,6 +119,8 @@ export default function CatalogInventory({
           : 'نوشیدنی'
       const message = `${itemType} «${name.trim()}» با موفقیت تغییر کرد.`
       await onChanged(message)
+      setImageFile(null)
+      setImagePreview(null)
       setEditing(null)
     } catch (err) {
       setError(getApiMessage(err))
@@ -186,6 +212,8 @@ export default function CatalogInventory({
                             onClick={() => {
                               if (isEditing) {
                                 setEditing(null)
+                                setImageFile(null)
+                                setImagePreview(null)
                               } else {
                                 startEdit(kind, item)
                               }
@@ -224,6 +252,47 @@ export default function CatalogInventory({
                                 onChange={(event) => setPrice(event.target.value)}
                               />
                             </label>
+
+                            {kind === 'foods' && (
+                              <div className="grid min-w-0 gap-3 rounded-xl border border-line bg-raised p-3 sm:col-span-2">
+                                <span className="text-sm font-semibold text-ink">
+                                  تصویر غذا
+                                </span>
+
+                                <div className="flex flex-wrap items-center gap-4">
+                                  <img
+                                    src={imagePreview || item.image_data.url}
+                                    alt={`تصویر ${item.name}`}
+                                    className="h-24 w-24 rounded-xl border border-line bg-white object-cover"
+                                  />
+
+                                  <div className="min-w-0 flex-1">
+                                    <label
+                                      htmlFor={`catalog-image-${item.id}`}
+                                      className="mb-2 block text-sm text-ink"
+                                    >
+                                      انتخاب تصویر جدید
+                                    </label>
+                                    <input
+                                      id={`catalog-image-${item.id}`}
+                                      type="file"
+                                      accept="image/jpeg,image/png,image/webp"
+                                      className="block w-full min-w-0 text-xs text-muted file:me-3 file:cursor-pointer file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-2 file:text-sm file:text-ink"
+                                      onChange={(event) => {
+                                        const file = event.target.files?.[0] ?? null
+                                        setImageFile(file)
+                                        setImagePreview(
+                                          file ? URL.createObjectURL(file) : null,
+                                        )
+                                      }}
+                                    />
+                                    <p className="mb-0 mt-2 text-xs text-muted">
+                                      اگر تصویری انتخاب نکنی، عکس قبلی حفظ می‌شود.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
 
                             {kind === 'foods' && (
                               <label className="grid gap-2 text-sm">
