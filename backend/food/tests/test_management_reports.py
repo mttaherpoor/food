@@ -514,6 +514,173 @@ class ManagementReportTests(TestCase):
 
         workbook.close()
 
+
+    def test_buildings_report_groups_active_reservations_by_day(self):
+        viewer = create_user_in_group('viewer-buildings', VIEWER_ROLE)
+
+        building_02, _ = Building.objects.get_or_create(
+            number='02',
+            defaults={'is_active': True},
+        )
+        building_07 = Building.objects.get(number='07')
+
+        employees = {
+            number: create_employee(
+                personnel_number=number,
+                building_number='07',
+                department_number='003',
+            )
+            for number in ('b-001', 'b-002', 'b-003', 'b-004')
+        }
+
+        food = Food.objects.create(
+            name='Building Report Food',
+            price=100_000,
+            container_price=10_000,
+        )
+
+        day_1 = Menu.objects.create(
+            date=date(2099, 4, 1),
+            food=food,
+        )
+        day_2 = Menu.objects.create(
+            date=date(2099, 4, 2),
+            food=food,
+        )
+
+        def add_reservation(
+            person, menu, building, snapshot, quantity,
+            *, cancelled=False,
+        ):
+            reservation = Reservation.objects.create(
+                user=employees[person],
+                menu=menu,
+                status=(
+                    Reservation.Status.CANCELLED
+                    if cancelled else Reservation.Status.RESERVED
+                ),
+            )
+            item = ReservationItem.objects.create(
+                reservation=reservation,
+                building=building,
+                building_number_snapshot=snapshot,
+                food_price=110_000,
+                food_quantity=quantity,
+                is_cancelled=cancelled,
+            )
+            return reservation, item
+
+        # Database insertion order is deliberately different
+        # from the required building order.
+        reservation_07, _ = add_reservation(
+            'b-002', day_1, building_07, '07', 1,
+        )
+
+        # The saved building snapshot must take priority.
+        add_reservation(
+            'b-001', day_1, building_07, '02', 2,
+        )
+        add_reservation(
+            'b-003', day_1, building_02, '02', 3,
+        )
+        add_reservation(
+            'b-001', day_2, building_07, '07', 2,
+        )
+
+        # Legacy reservation without a delivery building.
+        add_reservation(
+            'b-004', day_1, None, None, 1,
+        )
+
+        # Cancelled reservation must be excluded.
+        add_reservation(
+            'b-003', day_2, building_02, '02', 8,
+            cancelled=True,
+        )
+
+        # Historical revisions must not be counted twice.
+        ReservationItem.objects.create(
+            reservation=reservation_07,
+            building=building_02,
+            building_number_snapshot='02',
+            food_price=110_000,
+            food_quantity=9,
+            is_current=False,
+        )
+
+        self.client.force_login(viewer)
+
+        response = self.client.get(
+            reverse('daily-report-buildings'),
+            {'from': '2099-04-01', 'to': '2099-04-02'},
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json(), {
+            'buildings': [
+                {
+                    'building_number': '02',
+                    'reserved_count': 2,
+                    'days': [
+                        {
+                            'date': '2099-04-01',
+                            'food': 'Building Report Food',
+                            'reserved_count': 2,
+                            'food_quantity': 5,
+                        },
+                    ],
+                },
+                {
+                    'building_number': '07',
+                    'reserved_count': 2,
+                    'days': [
+                        {
+                            'date': '2099-04-01',
+                            'food': 'Building Report Food',
+                            'reserved_count': 1,
+                            'food_quantity': 1,
+                        },
+                        {
+                            'date': '2099-04-02',
+                            'food': 'Building Report Food',
+                            'reserved_count': 1,
+                            'food_quantity': 2,
+                        },
+                    ],
+                },
+            ],
+        })
+
+    def test_buildings_report_rejects_invalid_range(self):
+        viewer = create_user_in_group('viewer-buildings-invalid', VIEWER_ROLE)
+        self.client.force_login(viewer)
+
+        response = self.client.get(
+            reverse('daily-report-buildings'),
+            {'from': '2099-04-02', 'to': '2099-04-01'},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('to', response.json())
+
+    def test_employee_cannot_access_buildings_report(self):
+        employee = create_employee(
+            personnel_number='buildings-denied',
+            building_number='07',
+            department_number='003',
+        )
+        employee.must_change_password = False
+        employee.save(update_fields=['must_change_password'])
+
+        self.client.force_login(employee)
+
+        response = self.client.get(
+            reverse('daily-report-buildings'),
+            {'from': '2099-04-01', 'to': '2099-04-02'},
+        )
+
+        self.assertEqual(response.status_code, 403)
+
     def test_employee_cannot_access_management_reports(self):
         employee = create_employee(
             personnel_number='report-003',

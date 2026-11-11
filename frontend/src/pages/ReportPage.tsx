@@ -1,65 +1,130 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api, apiClient } from '../api/client'
-import type { DailyReport } from '../api/types'
 import EmptyState from '../components/ui/EmptyState'
 import ErrorMessage from '../components/ui/ErrorMessage'
-import JalaliDatePicker from '../components/ui/JalaliDatePicker'
-import { jalaliMonthStartISO } from '../components/ui/JalaliDatePicker'
+import JalaliDatePicker, { jalaliMonthStartISO } from '../components/ui/JalaliDatePicker'
 import { buttonClass } from '../components/ui/buttonStyles'
 import { dateToIso, formatDate } from '../utils/date'
 import { getApiMessage } from '../utils/errors'
-import { formatMoney } from '../utils/format'
+
+type BuildingReportDay = {
+  date: string
+  food: string
+  reserved_count: number
+  food_quantity: number
+}
+
+type BuildingReport = {
+  building_number: string
+  reserved_count: number
+  days: BuildingReportDay[]
+}
+
+type BuildingReportResponse = {
+  buildings: BuildingReport[]
+}
+
+const numberFormatter = new Intl.NumberFormat('fa-IR')
+
+function number(value: number): string {
+  return numberFormatter.format(value)
+}
 
 export default function ReportPage() {
   const today = dateToIso(new Date())
   const firstDay = jalaliMonthStartISO(today)
+
   const [fromDate, setFromDate] = useState(firstDay)
   const [toDate, setToDate] = useState(today)
-  const [rows, setRows] = useState<DailyReport[]>([])
+  const [buildings, setBuildings] = useState<BuildingReport[]>([])
+  const [selectedNumber, setSelectedNumber] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState('')
-  const total = rows.reduce((sum, row) => sum + row.total_toman, 0)
-  const reserved = rows.reduce((sum, row) => sum + row.reserved_count, 0)
+  const [downloading, setDownloading] = useState(false)
+  const requestIdRef = useRef(0)
+
+  const selectedBuilding = buildings.find(
+    (building) => building.building_number === selectedNumber,
+  )
+
+  const totalReservations = buildings.reduce(
+    (sum, building) => sum + building.reserved_count,
+    0,
+  )
 
   async function loadReport(event?: FormEvent) {
     event?.preventDefault()
+    const requestId = ++requestIdRef.current
     setLoading(true)
     setError('')
+
     try {
-      setRows(await api<DailyReport[]>(`/reports/daily?from=${fromDate}&to=${toDate}`))
+      const query = new URLSearchParams({
+        from: fromDate,
+        to: toDate,
+      })
+
+      const response = await api<BuildingReportResponse>(
+        `/reports/daily/buildings?${query.toString()}`,
+      )
+
+      if (requestId !== requestIdRef.current) return
+      setBuildings(response.buildings)
+      setSelectedNumber(null)
       setLoaded(true)
     } catch (loadError) {
-      setError(getApiMessage(loadError))
+      if (requestId === requestIdRef.current) {
+        setError(getApiMessage(loadError))
+      }
     } finally {
-      setLoading(false)
+      if (requestId === requestIdRef.current) {
+        setLoading(false)
+      }
     }
   }
 
   useEffect(() => {
     let active = true
+    const requestId = ++requestIdRef.current
 
-    api<DailyReport[]>(`/reports/daily?from=${firstDay}&to=${today}`)
-      .then((reportRows) => {
-        if (!active) return
-        setRows(reportRows)
+    const query = new URLSearchParams({
+      from: firstDay,
+      to: today,
+    })
+
+    api<BuildingReportResponse>(
+      `/reports/daily/buildings?${query.toString()}`,
+    )
+      .then((response) => {
+        if (!active || requestId !== requestIdRef.current) return
+        setBuildings(response.buildings)
         setLoaded(true)
       })
       .catch((loadError: unknown) => {
-        if (active) setError(getApiMessage(loadError))
+        if (active && requestId === requestIdRef.current) {
+          setError(getApiMessage(loadError))
+        }
       })
       .finally(() => {
-        if (active) setLoading(false)
+        if (active && requestId === requestIdRef.current) {
+          setLoading(false)
+        }
       })
 
     return () => {
       active = false
+      if (requestIdRef.current === requestId) {
+        requestIdRef.current += 1
+      }
     }
   }, [firstDay, today])
 
   async function downloadReport() {
     setError('')
+    setDownloading(true)
+
     try {
       const response = await apiClient.get<Blob>(
         '/reports/daily/export',
@@ -68,8 +133,8 @@ export default function ReportPage() {
           responseType: 'blob',
         },
       )
-      const blob = response.data
-      const url = URL.createObjectURL(blob)
+
+      const url = URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
       link.download = 'food-daily-report.xlsx'
@@ -77,30 +142,221 @@ export default function ReportPage() {
       link.click()
       link.remove()
       URL.revokeObjectURL(url)
-    } catch (downloadError) { setError(getApiMessage(downloadError)) }
+    } catch (downloadError) {
+      setError(getApiMessage(downloadError))
+    } finally {
+      setDownloading(false)
+    }
   }
 
-  return <section className="min-w-0" aria-labelledby="report-title">
-    <div className="mb-[25px] flex items-end justify-between gap-[18px] max-[680px]:mb-[18px] max-[680px]:items-start [&_h1]:m-0 [&_h1]:text-[clamp(26px,3vw,34px)] [&_h1]:leading-[1.35] [&_h1]:tracking-[-0.8px] max-[680px]:[&_h1]:text-[27px]"><div><p className="mt-0 mb-2 text-xs font-bold text-accent">گزارش مدیریتی</p><h1 id="report-title">گزارش روزانهٔ رزرو</h1><p className="mt-[7px] mb-0 text-sm leading-[1.7] text-muted max-[680px]:max-w-[440px] max-[680px]:text-xs">تعداد غذا و مبلغ رزروهای فعال را بر اساس تاریخ ببین.</p></div></div>
-    <form className="flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-line bg-surface p-[17px] max-[680px]:flex-col max-[680px]:items-stretch" onSubmit={(event) => void loadReport(event)}>
-      <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0"><legend className="mb-2 text-sm font-semibold text-ink">از تاریخ</legend><JalaliDatePicker onChange={setFromDate} required value={fromDate} /></fieldset>
-      <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0"><legend className="mb-2 text-sm font-semibold text-ink">تا تاریخ</legend><JalaliDatePicker onChange={setToDate} required value={toDate} /></fieldset>
-      <button className={buttonClass('primary', '')} disabled={loading} type="submit">{loading ? 'در حال دریافت…' : 'نمایش گزارش'}</button>
-      <button className={buttonClass('neutral', '')} onClick={() => void downloadReport()} type="button">خروجی Excel</button>
-    </form>
-    {error && <ErrorMessage message={error} onRetry={() => void loadReport()} />}
-    {loaded && !error && <>
-      <div className="my-[18px] grid grid-cols-2 gap-[13px] max-[680px]:gap-2">
-        <div className="grid gap-[5px] rounded-[11px] border border-line bg-surface p-[17px] max-[680px]:p-3">
-          <span className="text-xs text-muted">رزرو فعال در این بازه</span>
-          <strong className="text-[23px] max-[680px]:text-[17px]">{new Intl.NumberFormat('fa-IR').format(reserved)}</strong>
+  return (
+    <section className="min-w-0" aria-labelledby="report-title">
+      <header className="mb-6">
+        <p className="mb-2 text-xs font-bold text-accent">
+          گزارش مدیریتی
+        </p>
+        <h1
+          id="report-title"
+          className="m-0 text-[clamp(26px,3vw,34px)] font-bold text-ink"
+        >
+          گزارش رزرو ساختمان‌ها
+        </h1>
+        <p className="mt-2 text-sm leading-7 text-muted">
+          آمار رزرو هر ساختمان را در بازه دلخواه بررسی کن.
+        </p>
+      </header>
+
+      <form
+        className="flex flex-wrap items-end gap-3 rounded-[var(--radius)] border border-line bg-surface p-4 max-[680px]:flex-col max-[680px]:items-stretch"
+        onSubmit={(event) => void loadReport(event)}
+      >
+        <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0">
+          <legend className="mb-2 text-sm font-semibold text-ink">
+            از تاریخ
+          </legend>
+          <JalaliDatePicker
+            onChange={setFromDate}
+            required
+            value={fromDate}
+          />
+        </fieldset>
+
+        <fieldset className="min-w-[180px] border-0 p-0 max-[680px]:min-w-0">
+          <legend className="mb-2 text-sm font-semibold text-ink">
+            تا تاریخ
+          </legend>
+          <JalaliDatePicker
+            onChange={setToDate}
+            required
+            value={toDate}
+          />
+        </fieldset>
+
+        <button
+          className={buttonClass('primary', '')}
+          disabled={loading}
+          type="submit"
+        >
+          {loading ? 'در حال دریافت…' : 'نمایش گزارش'}
+        </button>
+
+        <button
+          className={buttonClass('neutral', '')}
+          disabled={downloading}
+          onClick={() => void downloadReport()}
+          type="button"
+        >
+          {downloading ? 'در حال دریافت Excel…' : 'خروجی Excel'}
+        </button>
+      </form>
+
+      {error && (
+        <div className="mt-4">
+          <ErrorMessage
+            message={error}
+            onRetry={() => void loadReport()}
+          />
         </div>
-        <div className="grid gap-[5px] rounded-[11px] border border-line bg-surface p-[17px] max-[680px]:p-3">
-          <span className="text-xs text-muted">جمع مبالغ</span>
-          <strong className="text-[23px] max-[680px]:text-[17px]">{formatMoney(total)}</strong>
+      )}
+
+      {loading && !loaded && (
+        <p className="mt-5 text-sm text-muted" role="status">
+          در حال بارگذاری گزارش ساختمان‌ها…
+        </p>
+      )}
+
+      {loaded && !error && (
+        <div className="mt-5">
+          {selectedBuilding ? (
+            <div>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="mb-1 text-sm text-muted">
+                    جزئیات روزانه ساختمان
+                  </p>
+                  <h2 className="m-0 text-2xl font-bold text-ink">
+                    ساختمان {selectedBuilding.building_number}
+                  </h2>
+                </div>
+
+                <button
+                  className={buttonClass('neutral', '')}
+                  onClick={() => setSelectedNumber(null)}
+                  type="button"
+                >
+                  بازگشت به ساختمان‌ها
+                </button>
+              </div>
+
+              <div className="mb-4 rounded-xl border border-line bg-surface p-4">
+                <span className="text-sm text-muted">
+                  مجموع رزروهای فعال در بازه
+                </span>
+                <p className="mb-0 mt-2 text-3xl font-bold text-ink">
+                  {number(selectedBuilding.reserved_count)}
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                {selectedBuilding.days.map((day) => (
+                  <article
+                    className="rounded-xl border border-line bg-surface p-4"
+                    key={`${day.date}-${day.food}`}
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="mb-2 text-sm font-semibold text-accent">
+                          {formatDate(day.date)}
+                        </p>
+                        <h3 className="m-0 text-lg font-bold text-ink">
+                          {day.food}
+                        </h3>
+                      </div>
+
+                      <div className="rounded-lg bg-raised px-4 py-3 text-center">
+                        <strong className="block text-2xl text-ink">
+                          {number(day.reserved_count)}
+                        </strong>
+                        <span className="text-xs text-muted">
+                          رزرو فعال
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t border-line pt-3 text-sm text-muted">
+                      تعداد پرس غذا:{' '}
+                      <strong className="text-ink">
+                        {number(day.food_quantity)}
+                      </strong>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="m-0 text-xl font-bold text-ink">
+                    ساختمان‌ها
+                  </h2>
+                  <p className="mt-2 text-sm text-muted">
+                    برای مشاهده گزارش روزانه، یک ساختمان را انتخاب کن.
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-line bg-surface px-4 py-3 text-sm text-muted">
+                  مجموع رزروها:{' '}
+                  <strong className="text-ink">
+                    {number(totalReservations)}
+                  </strong>
+                </div>
+              </div>
+
+              {buildings.length === 0 ? (
+                <EmptyState
+                  title="رزروی برای ساختمان‌ها ثبت نشده"
+                  detail="در بازه انتخابی، رزرو فعال دارای شماره ساختمان وجود ندارد."
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {buildings.map((building) => (
+                    <button
+                      aria-label={`مشاهده گزارش ساختمان ${building.building_number}`}
+                      className="group flex min-h-[170px] flex-col justify-between rounded-xl border border-line bg-surface p-5 text-right transition-colors hover:border-accent hover:bg-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      key={building.building_number}
+                      onClick={() => setSelectedNumber(building.building_number)}
+                      type="button"
+                    >
+                      <div className="flex w-full items-start justify-between gap-3">
+                        <span className="text-lg font-bold text-ink">
+                          ساختمان {building.building_number}
+                        </span>
+                        <span className="rounded-lg bg-raised px-2 py-1 text-xs text-muted">
+                          {number(building.days.length)} روز
+                        </span>
+                      </div>
+
+                      <div className="mt-5 w-full">
+                        <strong className="block text-3xl text-ink">
+                          {number(building.reserved_count)}
+                        </strong>
+                        <span className="mt-1 block text-sm text-muted">
+                          رزرو فعال در این بازه
+                        </span>
+                      </div>
+
+                      <span className="mt-4 text-sm font-semibold text-accent">
+                        مشاهده جزئیات
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </div>
-      {rows.length === 0 ? <EmptyState title="برای این بازه منویی ثبت نشده" detail="تاریخ دیگری را انتخاب کن." /> : <div className="max-w-full overflow-x-auto rounded-[10px] border border-line bg-surface"><table className="w-full min-w-[680px] border-collapse text-right text-[13px] whitespace-nowrap [&_th]:border-b [&_th]:border-line [&_th]:bg-raised [&_th]:px-[14px] [&_th]:py-[13px] [&_th]:font-semibold [&_th]:text-muted [&_td]:border-b [&_td]:border-line [&_td]:px-[14px] [&_td]:py-[13px]"><thead><tr><th>تاریخ</th><th>غذا</th><th>رزرو</th><th>لغو</th><th>تعداد غذا</th><th>جمع (تومان)</th></tr></thead><tbody>{rows.map((row) => <tr key={`${row.date}-${row.food}`}><td>{formatDate(row.date)}</td><td>{row.food}</td><td>{new Intl.NumberFormat('fa-IR').format(row.reserved_count)}</td><td>{new Intl.NumberFormat('fa-IR').format(row.cancelled_count)}</td><td>{new Intl.NumberFormat('fa-IR').format(row.food_quantity)}</td><td>{new Intl.NumberFormat('fa-IR').format(row.total_toman)}</td></tr>)}</tbody></table></div>}
-    </>}
-  </section>
+      )}
+    </section>
+  )
 }
