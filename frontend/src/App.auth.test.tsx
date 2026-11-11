@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router'
 import { http, HttpResponse } from 'msw'
@@ -8,6 +8,7 @@ import App from './App'
 import { api } from './api/client'
 import type { User } from './api/types'
 import { server } from './test/server'
+import { formatMoney } from './utils/format'
 
 vi.mock('./pages/HistoryPage', () => ({
   default: () => <h1>صفحه سوابق آزمایشی</h1>,
@@ -59,9 +60,134 @@ async function fillLogin() {
   )
 }
 
+// Default wallet summary for authenticated navigation tests.
+const walletSummaryHandler = http.get(
+  '/api/v1/reservations/wallet-summary',
+  () => HttpResponse.json({
+    month: '1405-08',
+    spent_toman: 0,
+    reservation_count: 0,
+  }),
+)
+
 describe('Authentication and routing', () => {
   beforeEach(() => {
+    server.use(walletSummaryHandler)
     window.history.replaceState({}, '', '/')
+  })
+
+  it('updates wallet spending after reservation mutations without refreshing', async () => {
+    let spent = 0
+    let walletRequests = 0
+    let rejectNextCreate = false
+
+    server.use(
+      http.get('*/api/v1/auth/session', () =>
+        HttpResponse.json(employee),
+      ),
+      http.get('*/api/v1/reservations/wallet-summary', () => {
+        walletRequests += 1
+        return HttpResponse.json({
+          month: '1405-08',
+          spent_toman: spent,
+          reservation_count: spent > 0 ? 1 : 0,
+        })
+      }),
+      http.post('*/api/v1/reservations', () => {
+        if (rejectNextCreate) {
+          return HttpResponse.json(
+            { detail: 'Reservation rejected' },
+            { status: 400 },
+          )
+        }
+
+        spent = 250000
+        return HttpResponse.json({ id: 12 }, { status: 201 })
+      }),
+      http.patch('*/api/v1/reservations/12', () => {
+        spent = 190000
+        return HttpResponse.json({ id: 12 })
+      }),
+      http.post('*/api/v1/reservations/12/cancel', () => {
+        spent = 0
+        return HttpResponse.json({ id: 12, status: 'can' })
+      }),
+    )
+
+    renderAt('/history')
+
+    await screen.findByRole('heading', {
+      name: 'صفحه سوابق آزمایشی',
+    })
+
+    const topbar = document.querySelector('.mobile-topbar')
+    expect(topbar).not.toBeNull()
+
+    const mobileWallet = within(topbar as HTMLElement)
+
+    await waitFor(() => {
+      expect(
+        mobileWallet.getByText(formatMoney(0)),
+      ).toBeInTheDocument()
+    })
+
+    expect(walletRequests).toBeGreaterThanOrEqual(1)
+
+    // A successful creation triggers an immediate wallet refresh.
+    const requestsBeforeCreate = walletRequests
+
+    await api('/reservations', {
+      method: 'POST',
+      body: JSON.stringify({ reservations: [] }),
+    })
+
+    await waitFor(() => {
+      expect(
+        mobileWallet.getByText(formatMoney(250000)),
+      ).toBeInTheDocument()
+    })
+
+    expect(walletRequests).toBeGreaterThan(requestsBeforeCreate)
+
+    // Editing replaces the previous amount, rather than adding to it.
+    await api('/reservations/12', {
+      method: 'PATCH',
+      body: JSON.stringify({ food_quantity: 1 }),
+    })
+
+    await waitFor(() => {
+      expect(
+        mobileWallet.getByText(formatMoney(190000)),
+      ).toBeInTheDocument()
+    })
+
+    // Cancellation removes the active reservation's amount.
+    await api('/reservations/12/cancel', {
+      method: 'POST',
+      body: '{}',
+    })
+
+    await waitFor(() => {
+      expect(
+        mobileWallet.getByText(formatMoney(0)),
+      ).toBeInTheDocument()
+    })
+
+    // A failed mutation must not dispatch a wallet refresh.
+    rejectNextCreate = true
+    const requestsBeforeFailure = walletRequests
+
+    await expect(
+      api('/reservations', {
+        method: 'POST',
+        body: JSON.stringify({ reservations: [] }),
+      }),
+    ).rejects.toMatchObject({ status: 400 })
+
+    expect(walletRequests).toBe(requestsBeforeFailure)
+    expect(
+      mobileWallet.getByText(formatMoney(0)),
+    ).toBeInTheDocument()
   })
 
   it('returns to /history after successful login', async () => {

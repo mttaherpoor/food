@@ -36,6 +36,7 @@ export const apiClient = axios.create({
 
 
 export const SESSION_EXPIRED_EVENT = 'pi-food:session-expired'
+export const RESERVATIONS_CHANGED_EVENT = 'pi-food:reservations-changed'
 
 let sessionVerification: Promise<void> | null = null
 
@@ -94,6 +95,13 @@ export async function api<T>(
       data: init.body ?? undefined,
       signal: init.signal ?? undefined,
     })
+
+    if (
+      ['POST', 'PATCH', 'DELETE'].includes(method) &&
+      /^\/reservations(?:\/\d+)?(?:\/cancel)?$/.test(path)
+    ) {
+      window.dispatchEvent(new Event(RESERVATIONS_CHANGED_EVENT))
+    }
 
     if (response.status === 204) {
       return undefined as T

@@ -30,6 +30,7 @@ from food.serializers import (
     WeeklyMenuSerializer,
 )
 from food.services import create_reservations, revise_reservation, weekly_menus
+from food.wallet import current_month_wallet
 
 RESERVATION_CUTOFF_HOUR = 10
 
@@ -110,6 +111,10 @@ class ReservationViewSet(viewsets.ModelViewSet):
             cutoff_hour=RESERVATION_CUTOFF_HOUR,
         )
         return Response(self.get_serializer(self.get_object()).data)
+
+    @action(detail=False, methods=['get'], url_path='wallet-summary')
+    def wallet_summary(self, request):
+        return Response(current_month_wallet(self.get_queryset()))
 
     @action(detail=False, methods=['get'], url_path='history-export')
     def history_export(self, request):
