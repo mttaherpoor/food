@@ -137,7 +137,7 @@ export default function JalaliDatePicker({ id, value, onChange, required, disabl
   const end = nextMonth(start)
   const count = Math.round((end.getTime() - start.getTime()) / 86400000)
   return <div className="relative min-w-[180px]" ref={container}>
-    <button aria-expanded={isOpen} aria-haspopup="dialog" aria-describedby={requiredError ? requiredErrorId : undefined} ref={triggerRef} className="flex min-h-[46px] w-full cursor-pointer items-center justify-between rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink" disabled={disabled} id={id} onClick={() => {
+    <button aria-expanded={isOpen} aria-haspopup="dialog" aria-describedby={requiredError ? requiredErrorId : undefined} ref={triggerRef} className="flex min-h-[46px] w-full cursor-pointer items-center justify-between rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink" disabled={disabled} id={id} onClick={() => {
       if (!isOpen) {
         setVisibleMonth(monthStart(fromIso(value || localTodayISO())))
         setRequiredError(false)
@@ -172,22 +172,22 @@ export default function JalaliDatePicker({ id, value, onChange, required, disabl
         انتخاب تاریخ الزامی است.
       </p>
     )}
-    {isOpen && <div aria-label="تقویم شمسی" className="fixed inset-x-4 top-1/2 z-[100] mx-auto max-h-[calc(100dvh-110px)] w-auto max-w-[360px] -translate-y-1/2 overflow-y-auto rounded-xl border border-[#d9dfe2] bg-white p-3 shadow-[0_12px_36px_#1b3c4a22] sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+5px)] sm:mx-0 sm:max-h-none sm:w-[292px] sm:max-w-[calc(100vw-32px)] sm:translate-y-0 sm:overflow-visible" dir="rtl" role="dialog">
+    {isOpen && <div aria-label="تقویم شمسی" className="fixed inset-x-4 top-1/2 z-[100] mx-auto max-h-[calc(100dvh-110px)] w-auto max-w-[360px] -translate-y-1/2 overflow-y-auto rounded-xl border border-line bg-surface p-3 shadow-[0_12px_36px_#1b3c4a22] sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+5px)] sm:mx-0 sm:max-h-none sm:w-[292px] sm:max-w-[calc(100vw-32px)] sm:translate-y-0 sm:overflow-visible" dir="rtl" role="dialog">
       <div className="mb-2 flex items-center justify-between">
-        <button aria-label="ماه قبل" className="min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent text-ink h-[34px] w-[34px] text-2xl hover:bg-[#e5f2f4]" onClick={() => setVisibleMonth(previousMonth(start))} type="button">‹</button>
+        <button aria-label="ماه قبل" className="min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent text-ink h-[34px] w-[34px] text-2xl hover:bg-raised" onClick={() => setVisibleMonth(previousMonth(start))} type="button">‹</button>
         <strong>{monthNames[month - 1]} {fa(year)}</strong>
-        <button aria-label="ماه بعد" className="min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent text-ink h-[34px] w-[34px] text-2xl hover:bg-[#e5f2f4]" onClick={() => setVisibleMonth(nextMonth(start))} type="button">›</button>
+        <button aria-label="ماه بعد" className="min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent text-ink h-[34px] w-[34px] text-2xl hover:bg-raised" onClick={() => setVisibleMonth(nextMonth(start))} type="button">›</button>
       </div>
       <div className="grid grid-cols-7 items-center gap-[2px] text-center">
-        {weekdays.map((d, index) => <span className="py-2 text-xs text-[#65727b]" key={index}>{d}</span>)}
+        {weekdays.map((d, index) => <span className="py-2 text-xs text-muted" key={index}>{d}</span>)}
         {Array.from({ length: offset }, (_, i) => <span key={`blank-${i}`} />)}
         {Array.from({ length: count }, (_, i) => {
           const dayDate = plusDays(start, i)
           const dayIso = iso(dayDate)
-          return <button aria-label={`${fa(i + 1)} ${monthNames[month - 1]} ${fa(year)}`} aria-pressed={dayIso === value} className={`min-h-[34px] cursor-pointer rounded-[7px] border-0 ${dayIso === value ? 'bg-[#206c80] text-white' : 'bg-transparent text-ink hover:bg-[#e5f2f4]'}`} data-iso={dayIso} key={dayIso} onKeyDown={(event) => handleDayKeyDown(event, dayDate)} onClick={() => { onChange(dayIso); setRequiredError(false); setOpen(false) }} type="button">{fa(i + 1)}</button>
+          return <button aria-label={`${fa(i + 1)} ${monthNames[month - 1]} ${fa(year)}`} aria-pressed={dayIso === value} className={`min-h-[34px] cursor-pointer rounded-[7px] border-0 ${dayIso === value ? 'bg-accent text-[var(--accent-contrast)]' : 'bg-transparent text-ink hover:bg-raised'}`} data-iso={dayIso} key={dayIso} onKeyDown={(event) => handleDayKeyDown(event, dayDate)} onClick={() => { onChange(dayIso); setRequiredError(false); setOpen(false) }} type="button">{fa(i + 1)}</button>
         })}
       </div>
-      <button className="mt-[6px] min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent px-[10px] py-1 text-[#206c80]" onClick={() => { onChange(localTodayISO()); setRequiredError(false); setOpen(false) }} type="button">امروز</button>
+      <button className="mt-[6px] min-h-[34px] cursor-pointer rounded-[7px] border-0 bg-transparent px-[10px] py-1 text-accent" onClick={() => { onChange(localTodayISO()); setRequiredError(false); setOpen(false) }} type="button">امروز</button>
     </div>}
   </div>
 }

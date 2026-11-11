@@ -397,7 +397,7 @@ export default function HistoryPage() {
           title="دانلود Excel تمام سوابق"
           onClick={() => void downloadHistory()}
           disabled={loading || exporting || reservations.length === 0}
-          className="absolute left-0 top-0 inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-sm font-semibold text-accent shadow-sm transition-colors hover:bg-raised disabled:cursor-not-allowed disabled:opacity-50"
+          className="absolute left-0 top-0 inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-sm font-semibold text-accent shadow-sm transition-colors hover:bg-raised disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download size={17} aria-hidden="true" />
           <span>{exporting ? 'در حال دریافت...' : 'خروجی اکسل'}</span>
@@ -417,7 +417,7 @@ export default function HistoryPage() {
         <div className="grid gap-4">
           {months.map((month) => (
             <details
-              className="group min-w-0 overflow-hidden rounded-2xl border border-line bg-white"
+              className="group min-w-0 overflow-hidden rounded-2xl border border-line bg-surface"
               key={month.key}
             >
               <summary

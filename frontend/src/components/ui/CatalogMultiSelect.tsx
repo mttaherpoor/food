@@ -99,7 +99,7 @@ export default function CatalogMultiSelect({
                     aria-label={`کاهش ${label} ${item.name}`}
                     disabled={disabled || quantity === 0}
                     onClick={() => updateQuantity(item.id, quantity - 1)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line bg-white text-ink hover:bg-raised disabled:opacity-40"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink hover:bg-raised disabled:opacity-40"
                   >
                     <Minus size={15} aria-hidden="true" />
                   </button>
@@ -116,7 +116,7 @@ export default function CatalogMultiSelect({
                     aria-label={`افزودن ${label} ${item.name}`}
                     disabled={disabled || quantity >= 99}
                     onClick={() => updateQuantity(item.id, quantity + 1)}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line bg-white text-ink hover:bg-raised disabled:opacity-40"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink hover:bg-raised disabled:opacity-40"
                   >
                     <Plus size={15} aria-hidden="true" />
                   </button>

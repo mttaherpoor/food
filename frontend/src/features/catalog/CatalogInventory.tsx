@@ -135,7 +135,7 @@ export default function CatalogInventory({
 
   return (
     <section
-      className="col-span-full min-w-0 rounded-xl border border-line bg-white p-[18px]"
+      className="col-span-full min-w-0 rounded-xl border border-line bg-white dark:bg-surface p-[18px]"
       aria-labelledby="inventory-title"
     >
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -169,8 +169,8 @@ export default function CatalogInventory({
           )
 
           return (
-            <details key={kind} className="open:z-30 relative min-w-0 overflow-visible rounded-lg border border-[#d4e1e5] bg-white">
-              <summary className="cursor-pointer bg-[#edf3f5] px-4 py-4 text-sm font-semibold text-[#274d59] hover:bg-[#e1edf1]">
+            <details key={kind} className="open:z-30 relative min-w-0 overflow-visible rounded-lg border border-[#d4e1e5] dark:border-line bg-white dark:bg-surface">
+              <summary className="cursor-pointer bg-[#edf3f5] dark:bg-raised px-4 py-4 text-sm font-semibold text-[#274d59] dark:text-ink hover:bg-[#e1edf1] dark:hover:bg-active">
                 {title} ({filtered.length})
               </summary>
               <div className="px-3 pb-3">
@@ -278,7 +278,7 @@ export default function CatalogInventory({
                                   <img
                                     src={imagePreview || item.image_data.url}
                                     alt={`تصویر ${item.name}`}
-                                    className="h-24 w-24 rounded-xl border border-line bg-white object-cover"
+                                    className="h-24 w-24 rounded-xl border border-line bg-white dark:bg-surface object-cover"
                                   />
 
                                   <div className="min-w-0 flex-1">
@@ -292,7 +292,7 @@ export default function CatalogInventory({
                                       id={`catalog-image-${item.id}`}
                                       type="file"
                                       accept="image/jpeg,image/png,image/webp"
-                                      className="block w-full min-w-0 text-xs text-muted file:me-3 file:cursor-pointer file:rounded-lg file:border file:border-line file:bg-white file:px-3 file:py-2 file:text-sm file:text-ink"
+                                      className="block w-full min-w-0 text-xs text-muted file:me-3 file:cursor-pointer file:rounded-lg file:border file:border-line file:bg-white dark:file:bg-active file:px-3 file:py-2 file:text-sm file:text-ink dark:file:text-ink"
                                       onChange={(event) => {
                                         const file = event.target.files?.[0] ?? null
                                         setImageFile(file)
@@ -312,7 +312,7 @@ export default function CatalogInventory({
                               <button
                                 type="submit"
                                 disabled={saving}
-                                className="min-h-11 w-full rounded-lg bg-accent px-4 text-sm font-semibold text-white disabled:opacity-50"
+                                className="min-h-11 w-full rounded-lg bg-accent dark:text-[var(--accent-contrast)] px-4 text-sm font-semibold text-white disabled:opacity-50"
                               >
                                 {saving ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
                               </button>

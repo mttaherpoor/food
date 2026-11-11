@@ -41,7 +41,7 @@ function ProfileSelect({
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-12 lg:min-h-10 w-full rounded-lg border border-line bg-white px-3 text-sm text-ink outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
+        className="min-h-12 lg:min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-60"
       >
         <option value="" disabled>
           انتخاب {label}
@@ -185,7 +185,7 @@ export default function ProfilePage() {
 
   if (loadError || !profile || !options) {
     return (
-      <section className="rounded-xl border border-line bg-white p-6">
+      <section className="rounded-xl border border-line bg-surface p-6">
         <h1 className="mb-3 text-xl font-bold">پروفایل</h1>
         <p role="alert" className="text-sm text-negative">
           {loadError || 'دریافت اطلاعات پروفایل امکان‌پذیر نیست.'}
@@ -219,7 +219,7 @@ export default function ProfilePage() {
 
       <form
         onSubmit={(event) => void savePreferences(event)}
-        className="rounded-xl border border-line bg-white p-6 max-[680px]:p-4 lg:p-4"
+        className="rounded-xl border border-line bg-surface p-6 max-[680px]:p-4 lg:p-4"
       >
         <h2 className="mb-5 text-lg font-bold text-ink lg:mb-3">اطلاعات پروفایل</h2>
 
@@ -275,7 +275,7 @@ export default function ProfilePage() {
           <button
             type="submit"
             disabled={saving || (!buildingChanged && !departmentChanged)}
-            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-[var(--accent-contrast)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save aria-hidden="true" size={17} />
             {saving ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
@@ -285,7 +285,7 @@ export default function ProfilePage() {
 
       <form
         onSubmit={(event) => void savePassword(event)}
-        className="rounded-xl border border-line bg-white p-6 max-[680px]:p-4 lg:p-4"
+        className="rounded-xl border border-line bg-surface p-6 max-[680px]:p-4 lg:p-4"
       >
         <div className="mb-5 flex items-center gap-2 lg:mb-3">
           <KeyRound aria-hidden="true" className="text-accent" size={20} />
@@ -314,7 +314,7 @@ export default function ProfilePage() {
                   setPasswordError('')
                   setPasswordSuccess('')
                 }}
-                className="min-h-12 lg:min-h-10 rounded-lg border border-line bg-white px-3 text-sm text-ink outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
+                className="min-h-12 lg:min-h-10 rounded-lg border border-line bg-surface px-3 text-sm text-ink outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
               />
             </div>
           ))}
@@ -335,7 +335,7 @@ export default function ProfilePage() {
           <button
             type="submit"
             disabled={passwordBusy}
-            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-accent px-5 text-sm font-semibold text-[var(--accent-contrast)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <KeyRound aria-hidden="true" size={17} />
             {passwordBusy ? 'در حال تغییر…' : 'تغییر رمز عبور'}

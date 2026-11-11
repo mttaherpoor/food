@@ -139,7 +139,7 @@ export default function WeekPage() {
       <div className="flex min-h-[58px] items-center justify-between gap-[14px] border-y border-line py-2 max-[680px]:flex-col-reverse max-[680px]:items-start max-[680px]:gap-[5px] max-[680px]:py-[10px]">
         <div className="flex items-center gap-[9px] max-[680px]:w-full max-[680px]:justify-between max-[680px]:gap-[3px]">
           <button aria-label="هفتهٔ قبل" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, -7))} type="button"><ChevronRight size={18} /></button>
-          <strong className="whitespace-nowrap text-sm max-[680px]:text-xs">{formatDate(startIso, { weekday: undefined })} <span className="mx-1 font-normal text-[#899094]">تا</span> {formatDate(dateToIso(addDays(weekStart, 5)), { weekday: undefined })}</strong>
+          <strong className="whitespace-nowrap text-sm max-[680px]:text-xs">{formatDate(startIso, { weekday: undefined })} <span className="mx-1 font-normal text-muted">تا</span> {formatDate(dateToIso(addDays(weekStart, 5)), { weekday: undefined })}</strong>
           <button aria-label="هفتهٔ بعد" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, 7))} type="button"><ChevronLeft size={18} /></button>
           <button className={buttonClass('primary', 'min-h-[36px] px-3 py-1.5 text-xs whitespace-nowrap max-[680px]:min-h-[34px] max-[680px]:px-2')} onClick={() => setWeekStart(getWeekStart(new Date()))} type="button">هفته جاری</button>
         </div>
@@ -149,7 +149,7 @@ export default function WeekPage() {
       <div className="my-3 mt-[18px] flex flex-wrap gap-[7px] max-[680px]:my-2 max-[680px]:mt-[13px] max-[680px]:flex-nowrap max-[680px]:overflow-x-auto max-[680px]:pb-[3px]" role="group" aria-label="فیلتر روزها">
         {([
           ['all', 'همهٔ روزها'], ['reserved', 'رزروهای من'], ['open', 'رزرو نشده'],
-        ] as const).map(([key, label]) => <button aria-pressed={filter === key} className={`inline-flex min-h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 py-[7px] text-xs transition-colors duration-150 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#63a5b4] ${filter === key ? 'border-[#a8ccd4] bg-accent-soft font-semibold text-[#155c6c]' : 'border-line bg-white font-normal text-[#596166] hover:bg-raised hover:text-ink'}`} key={key} onClick={() => setFilter(key)} type="button">{label}</button>)}
+        ] as const).map(([key, label]) => <button aria-pressed={filter === key} className={`inline-flex min-h-9 shrink-0 cursor-pointer items-center justify-center rounded-full border px-3 py-[7px] text-xs transition-colors duration-150 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-[#63a5b4] ${filter === key ? 'border-accent/40 bg-accent-soft font-semibold text-accent' : 'border-line bg-surface font-normal text-muted hover:bg-raised hover:text-ink'}`} key={key} onClick={() => setFilter(key)} type="button">{label}</button>)}
       </div>
 
       {error && <ErrorMessage message={error} onRetry={() => void load()} />}
@@ -204,9 +204,9 @@ function DayRow({ date, index, menu, onEdit }: { date: string; index: number; me
               </span>
             </div>
           </div>
-        ) : <><strong className="truncate text-sm text-[#899094] max-[680px]:text-[13px]">منویی ثبت نشده</strong><span className="text-xs text-muted">برای این روز هنوز غذایی در برنامه نیست.</span></>}
+        ) : <><strong className="truncate text-sm text-muted max-[680px]:text-[13px]">منویی ثبت نشده</strong><span className="text-xs text-muted">برای این روز هنوز غذایی در برنامه نیست.</span></>}
       </div>
-      <div className="flex items-center gap-2 whitespace-nowrap text-xs text-[#555d61] max-[680px]:col-start-2 max-[680px]:row-start-1 max-[680px]:justify-self-end max-[680px]:text-[11px]">
+      <div className="flex items-center gap-2 whitespace-nowrap text-xs text-muted max-[680px]:col-start-2 max-[680px]:row-start-1 max-[680px]:justify-self-end max-[680px]:text-[11px]">
         {activeReservation ? <>
           <span className="h-2 w-2 rounded-full bg-positive" />
           <span>رزرو شده</span>
@@ -216,7 +216,7 @@ function DayRow({ date, index, menu, onEdit }: { date: string; index: number; me
         </> : menu ? <>
           <span className="h-2 w-2 rounded-full bg-[#d49b38]" />
           <span>{menu.can_reserve ? 'رزرو نشده' : 'مهلت گذشته'}</span>
-        </> : <span className="text-[#899094]">—</span>}
+        </> : <span className="text-muted">—</span>}
       </div>
       <div className="day-action flex justify-start max-[680px]:col-start-2 max-[680px]:row-start-2 max-[680px]:self-center">
         {menu && (activeReservation
@@ -483,17 +483,17 @@ function ReservationDialog({
         onClick={onClose}
         tabIndex={-1}
       />
-      <section aria-labelledby="reservation-dialog-title" aria-modal="true" className="relative z-10 w-full max-w-[480px] max-h-[min(90svh,760px)] overflow-y-auto rounded-2xl border border-white/50 bg-white p-[22px] shadow-[0_20px_70px_#09252d33] max-[680px]:max-h-[88svh] max-[680px]:self-end max-[680px]:rounded-t-2xl max-[680px]:rounded-b-[10px] max-[680px]:p-[19px]" ref={dialogRef} tabIndex={-1} role="dialog">
+      <section aria-labelledby="reservation-dialog-title" aria-modal="true" className="relative z-10 w-full max-w-[480px] max-h-[min(90svh,760px)] overflow-y-auto rounded-2xl border border-line bg-surface text-ink p-[22px] shadow-[0_20px_70px_#09252d33] max-[680px]:max-h-[88svh] max-[680px]:self-end max-[680px]:rounded-t-2xl max-[680px]:rounded-b-[10px] max-[680px]:p-[19px]" ref={dialogRef} tabIndex={-1} role="dialog">
         <div className="flex items-start justify-between gap-3 border-b border-line pb-[17px]">
           <div><p className="mt-0 mb-[3px] text-xs font-bold text-accent">{formatDate(menu.date)}</p><h2 className="m-0 text-xl" id="reservation-dialog-title">{saved ? 'رزرو ثبت شد' : cancelled ? 'رزرو لغو شد' : menu.food_name}</h2></div>
           <button aria-label="بستن" className={iconButtonClass} onClick={onClose} type="button"><X size={19} /></button>
         </div>
-        {saved || cancelled ? <div className="rounded-[9px] border border-[#c9e5d7] bg-[#f0faf4] p-[14px] leading-[1.8] text-[#176441]" role="status">{saved ? 'انتخابت برای این روز ثبت شد.' : 'رزرو این روز لغو شد و در سوابق باقی ماند.'}</div> : <form className="grid gap-[11px] pt-4" onSubmit={save}>
+        {saved || cancelled ? <div className="rounded-[9px] border border-[#c9e5d7] bg-[#f0faf4] p-[14px] leading-[1.8] text-[#176441] dark:border-positive/40 dark:bg-raised dark:text-positive" role="status">{saved ? 'انتخابت برای این روز ثبت شد.' : 'رزرو این روز لغو شد و در سوابق باقی ماند.'}</div> : <form className="grid gap-[11px] pt-4" onSubmit={save}>
           <p className="m-0 flex justify-between gap-[10px] py-[11px] text-[13px] text-muted">غذای روز <strong className="text-ink">{formatMoney(menu.food_price)}</strong></p>
-          <label className="m-0 flex flex-col gap-2 text-sm font-semibold text-[#34393c]">
+          <label className="m-0 flex flex-col gap-2 text-sm font-semibold text-ink">
             ساختمان محل تحویل
             <select
-              className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] bg-white px-[13px] py-[10px] text-ink"
+              className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink"
               disabled={buildingLoading || Boolean(buildingLoadError)}
               onChange={(event) => setBuilding(event.target.value)}
               required
@@ -539,7 +539,7 @@ function ReservationDialog({
             disabled={saving || canceling}
           />
           <div className="mt-1 flex justify-between gap-[10px] border-t border-line py-[11px] text-sm text-muted"><span>جمع این انتخاب</span><strong className="text-ink">{formatMoney(total)}</strong></div>
-          {error && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a]" role="alert">{error}</p>}
+          {error && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a] dark:border-negative/40 dark:bg-raised dark:text-negative" role="alert">{error}</p>}
           <button className={buttonClass('primary', 'w-full')} disabled={saving || canceling || buildingLoading || Boolean(buildingLoadError)} type="submit">{saving ? 'در حال ثبت…' : menu.reservation?.status === 'can' ? 'ثبت رزرو مجدد' : menu.reservation ? 'ذخیرهٔ ویرایش' : 'ثبت رزرو'}</button>
           {menu.reservation?.status === 'res' && <button className={buttonClass('dangerQuiet', '')} disabled={saving || canceling} onClick={() => void cancelReservation()} type="button">{canceling ? 'در حال لغو…' : 'لغو غذای این روز'}</button>}
           <p className="mt-px mb-0 text-center text-[11px] text-muted">مهلت رزرو و ویرایش تا ساعت ۱۰ صبح روز قبل است.</p>

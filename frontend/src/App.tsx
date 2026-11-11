@@ -288,7 +288,7 @@ export default function App() {
           <div
             role="status"
             aria-live="polite"
-            className="grid min-h-[220px] place-items-center rounded-xl border border-line bg-white p-6 text-sm text-muted"
+            className="grid min-h-[220px] place-items-center rounded-xl border border-line bg-surface p-6 text-sm text-muted"
           >
             در حال بارگذاری صفحه…
           </div>

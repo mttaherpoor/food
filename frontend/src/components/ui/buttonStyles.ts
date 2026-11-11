@@ -22,15 +22,15 @@ const sizes: Record<ButtonSize, string> = {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'border-transparent bg-accent text-white ' +
-    'hover:not-disabled:bg-[#145769]',
+    'border-transparent bg-accent text-[var(--accent-contrast)] ' +
+    'hover:not-disabled:brightness-90',
   secondary:
-    'border-line bg-white text-ink hover:not-disabled:bg-raised',
+    'border-line bg-surface text-ink hover:not-disabled:bg-raised',
   disabled:
     'border-line bg-raised text-muted',
   dangerQuiet:
-    'border-transparent bg-white text-negative ' +
-    'hover:not-disabled:bg-[#fff2f2]',
+    'border-transparent bg-surface text-negative ' +
+    'hover:not-disabled:bg-raised',
   neutral:
     'border-transparent bg-transparent text-ink',
 }
@@ -48,7 +48,7 @@ export function buttonClass(
 export const iconButtonClass =
   'inline-grid h-[38px] w-[38px] shrink-0 cursor-pointer ' +
   'place-items-center rounded-[9px] border border-line ' +
-  'bg-white hover:bg-raised'
+  'bg-surface text-ink hover:bg-raised'
 
 export const textButtonClass =
   'inline-flex min-h-9 cursor-pointer items-center ' +
