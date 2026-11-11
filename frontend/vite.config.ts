@@ -18,6 +18,14 @@ export default defineConfig(({ command }) => ({
         target: 'http://backend:8000',
         changeOrigin: true,
       },
+      '/media': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/static': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
     },
   },
 }))

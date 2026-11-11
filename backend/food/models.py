@@ -4,6 +4,8 @@ from django.db.models import Q
 
 from typing import ClassVar
 
+from .mixins import CatalogImageMixin
+
 
 class TimestampedModel(models.Model):
     datetime_created = models.DateTimeField(auto_now_add=True)
@@ -13,7 +15,9 @@ class TimestampedModel(models.Model):
         abstract = True
 
 
-class Food(TimestampedModel):
+class Food(CatalogImageMixin, TimestampedModel):
+    DEFAULT_IMAGE = "images/defaults/default-food.webp"
+
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='foods/', blank=True)
     price = models.PositiveBigIntegerField(
@@ -35,7 +39,9 @@ class Food(TimestampedModel):
         return self.name
 
 
-class Side(TimestampedModel):
+class Side(CatalogImageMixin, TimestampedModel):
+    DEFAULT_IMAGE = "images/defaults/default-side.webp"
+
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='sides/', blank=True)
     price = models.PositiveBigIntegerField(
@@ -47,7 +53,9 @@ class Side(TimestampedModel):
         return self.name
 
 
-class Drink(TimestampedModel):
+class Drink(CatalogImageMixin, TimestampedModel):
+    DEFAULT_IMAGE = "images/defaults/default-drink.webp"
+
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='drinks/', blank=True)
     price = models.PositiveBigIntegerField(

@@ -1,14 +1,36 @@
 from rest_framework import serializers
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 
 from datetime import datetime, time, timedelta
 
 from core.models import Building
 from food.models import Drink, Food, Menu, MenuStatus, Reservation, ReservationItem, Side
+from food.services import prepare_catalog_image
 
 
-class FoodSerializer(serializers.ModelSerializer):
+class CatalogImageSerializerMixin:
+    def get_image_data(self, obj):
+        data = obj.image_data
+        return {
+            "url": data.url,
+            "alt": data.alt,
+        }
+
+    def validate_image(self, value):
+        if value is None:
+            return value
+
+        try:
+            return prepare_catalog_image(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(exc.messages) from exc
+
+
+class FoodSerializer(CatalogImageSerializerMixin, serializers.ModelSerializer):
+    image_data = serializers.SerializerMethodField()
+
     total_price = serializers.IntegerField(
         read_only=True,
         min_value=0,
@@ -20,6 +42,8 @@ class FoodSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'name',
+            'image',
+            'image_data',
             'price',
             'container_price',
             'total_price',
@@ -29,17 +53,21 @@ class FoodSerializer(serializers.ModelSerializer):
         read_only_fields = ('total_price', 'datetime_created', 'datetime_modified')
 
 
-class SideSerializer(serializers.ModelSerializer):
+class SideSerializer(CatalogImageSerializerMixin, serializers.ModelSerializer):
+    image_data = serializers.SerializerMethodField()
+
     class Meta:
         model = Side
-        fields = ('id', 'name', 'price', 'datetime_created', 'datetime_modified')
+        fields = ('id', 'name', 'image', 'image_data', 'price', 'datetime_created', 'datetime_modified')
         read_only_fields = ('datetime_created', 'datetime_modified')
 
 
-class DrinkSerializer(serializers.ModelSerializer):
+class DrinkSerializer(CatalogImageSerializerMixin, serializers.ModelSerializer):
+    image_data = serializers.SerializerMethodField()
+
     class Meta:
         model = Drink
-        fields = ('id', 'name', 'price', 'datetime_created', 'datetime_modified')
+        fields = ('id', 'name', 'image', 'image_data', 'price', 'datetime_created', 'datetime_modified')
         read_only_fields = ('datetime_created', 'datetime_modified')
 
 
@@ -225,16 +253,35 @@ class ReservationSerializer(serializers.ModelSerializer):
 
 class WeeklyMenuSerializer(serializers.ModelSerializer):
     can_reserve = serializers.SerializerMethodField()
-    food_name = serializers.CharField(source='food.name', read_only=True)
+    food_name = serializers.CharField(source="food.name", read_only=True)
+    food_image = serializers.ImageField(source="food.image", read_only=True)
+    food_image_data = serializers.SerializerMethodField()
     food_price = serializers.IntegerField(
         source='food.total_price',
         read_only=True,
     )
+
     reservation = serializers.SerializerMethodField()
 
     class Meta:
         model = Menu
-        fields = ('id', 'date', 'food_name', 'food_price', 'reservation', 'can_reserve')
+        fields = (
+            'id',
+            'date',
+            'food_name',
+            'food_image',
+            'food_image_data',
+            'food_price',
+            'reservation',
+            'can_reserve',
+        )
+
+    def get_food_image_data(self, obj):
+        data = obj.food.image_data
+        return {
+            "url": data.url,
+            "alt": data.alt,
+        }
 
     def get_reservation(self, menu):
         reservations = menu.reservations.all()
