@@ -2,24 +2,32 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @font-face {
-  font-family: 'IRANSansDN';
-  src: url('/fonts/iransansdnlight.woff2') format('woff2');
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'IRANSansDN';
-  src: url('/fonts/iransansdn.woff2') format('woff2');
+  font-family: 'IRANSansX';
+  src: url('/fonts/IRANSansX-Regular.woff2') format('woff2');
   font-style: normal;
   font-weight: 400;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'IRANSansDN';
-  src: url('/fonts/iransansdnbold.woff2') format('woff2');
+  font-family: 'IRANSansX';
+  src: url('/fonts/IRANSansX-Medium.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IRANSansX';
+  src: url('/fonts/IRANSansX-DemiBold.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IRANSansX';
+  src: url('/fonts/IRANSansX-Bold.woff2') format('woff2');
   font-style: normal;
   font-weight: 700;
   font-display: swap;
@@ -42,7 +50,7 @@
 }
 
 :root {
-  font-family: 'IRANSansDN', Tahoma, sans-serif;
+  font-family: 'IRANSansX', Tahoma, sans-serif;
   color: #131416;
   background: #f9fbfc;
   font-synthesis: none;
