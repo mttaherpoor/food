@@ -1,9 +1,7 @@
 from rest_framework import serializers
 
+from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.utils import timezone
-
-from datetime import datetime, time, timedelta
 
 from core.models import Building
 from food.models import Drink, Food, Menu, MenuStatus, Reservation, ReservationItem, Side
@@ -289,6 +287,9 @@ class WeeklyMenuSerializer(serializers.ModelSerializer):
         return ReservationSerializer(reservation, context=self.context).data if reservation else None
 
     def get_can_reserve(self, menu):
-        current_timezone = timezone.get_default_timezone()
-        cutoff = datetime.combine(menu.date - timedelta(days=1), time(hour=10), tzinfo=current_timezone)
-        return menu.status == MenuStatus.AVAILABLE and datetime.now(current_timezone) < cutoff
+        from food.services import is_reservation_window_open
+
+        return (
+            menu.status == MenuStatus.AVAILABLE
+            and is_reservation_window_open(menu, settings.RESERVATION_CUTOFF_HOUR)
+        )

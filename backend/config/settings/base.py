@@ -1,3 +1,5 @@
+from django.core.exceptions import ImproperlyConfigured
+
 import os
 from pathlib import Path
 
@@ -88,6 +90,20 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'fa-ir'
 TIME_ZONE = 'Asia/Tehran'
+
+# Reservation deadline: specified hour on the day before the menu date.
+_cutoff_raw = os.getenv('RESERVATION_CUTOFF_HOUR', '10')
+try:
+    RESERVATION_CUTOFF_HOUR = int(_cutoff_raw)
+except (TypeError, ValueError) as exc:
+    raise ImproperlyConfigured(
+        'RESERVATION_CUTOFF_HOUR must be an integer between 0 and 23.'
+    ) from exc
+
+if not 0 <= RESERVATION_CUTOFF_HOUR <= 23:
+    raise ImproperlyConfigured(
+        'RESERVATION_CUTOFF_HOUR must be between 0 and 23.'
+    )
 USE_I18N = True
 USE_TZ = True
 

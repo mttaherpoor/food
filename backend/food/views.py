@@ -4,6 +4,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from django.conf import settings
 from django.db.models import Prefetch
 from django.http import HttpResponse
 from django.utils.dateparse import parse_date
@@ -31,8 +32,6 @@ from food.serializers import (
 )
 from food.services import create_reservations, revise_reservation, weekly_menus
 from food.wallet import current_month_wallet
-
-RESERVATION_CUTOFF_HOUR = 10
 
 
 class CatalogViewSet(
@@ -94,7 +93,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
         reservations = create_reservations(
             request.user,
             input_serializer.validated_data['reservations'],
-            cutoff_hour=RESERVATION_CUTOFF_HOUR,
+            cutoff_hour=settings.RESERVATION_CUTOFF_HOUR,
         )
         return Response(
             self.get_serializer(reservations, many=True).data,
@@ -108,7 +107,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
         revise_reservation(
             reservation,
             input_serializer.validated_data,
-            cutoff_hour=RESERVATION_CUTOFF_HOUR,
+            cutoff_hour=settings.RESERVATION_CUTOFF_HOUR,
         )
         return Response(self.get_serializer(self.get_object()).data)
 
@@ -151,7 +150,7 @@ class ReservationViewSet(viewsets.ModelViewSet):
             reservation,
             {},
             cancelled=True,
-            cutoff_hour=RESERVATION_CUTOFF_HOUR,
+            cutoff_hour=settings.RESERVATION_CUTOFF_HOUR,
         )
         return Response(self.get_serializer(self.get_object()).data)
 

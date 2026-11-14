@@ -1,8 +1,8 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from datetime import datetime
+from datetime import date, datetime
 from unittest.mock import patch
 
 from core.models import Building, Department
@@ -27,7 +27,7 @@ class ReservationAPITests(TestCase):
             container_price=100_000,
         )
         cls.menu = Menu.objects.create(
-            date='2099-01-02',
+            date=date(2099, 1, 2),
             food=cls.food,
         )
 
@@ -732,6 +732,89 @@ class ReservationAPITests(TestCase):
         self.assertEqual(response.status_code, 400, response.content)
         self.assertIn('menu', response.json())
         self.assertEqual(Reservation.objects.count(), 0)
+
+
+    def test_configurable_cutoff_matches_weekly_menu_and_service(self):
+        from rest_framework.exceptions import ValidationError
+
+        from food.serializers import WeeklyMenuSerializer
+        from food.services import validate_reservation_window
+
+        serializer = WeeklyMenuSerializer()
+
+        cases = (
+            (9, 8, 59, True),
+            (9, 9, 0, False),
+            (11, 10, 59, True),
+            (11, 11, 0, False),
+        )
+
+        for cutoff_hour, hour, minute, expected in cases:
+            with self.subTest(cutoff_hour=cutoff_hour, hour=hour, minute=minute):
+                current = datetime(
+                    2099, 1, 1, hour, minute,
+                    tzinfo=timezone.get_default_timezone(),
+                )
+
+                with (
+                    override_settings(RESERVATION_CUTOFF_HOUR=cutoff_hour),
+                    patch('food.services._local_now', return_value=current),
+                ):
+                    self.assertEqual(
+                        serializer.get_can_reserve(self.menu),
+                        expected,
+                    )
+
+                    if expected:
+                        validate_reservation_window(self.menu, cutoff_hour)
+                    else:
+                        with self.assertRaises(ValidationError):
+                            validate_reservation_window(self.menu, cutoff_hour)
+
+    @override_settings(RESERVATION_CUTOFF_HOUR=9)
+    def test_configured_nine_am_cutoff_rejects_reservation(self):
+        current = datetime(
+            2099, 1, 1, 9, 0,
+            tzinfo=timezone.get_default_timezone(),
+        )
+
+        with patch('food.services._local_now', return_value=current):
+            response = self.client.post(
+                reverse('reservation-list'),
+                {
+                    'reservations': [{
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                    }],
+                },
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertIn('menu', response.json())
+        self.assertEqual(Reservation.objects.count(), 0)
+
+    @override_settings(RESERVATION_CUTOFF_HOUR=11)
+    def test_configured_eleven_am_cutoff_allows_reservation_before_deadline(self):
+        current = datetime(
+            2099, 1, 1, 10, 59,
+            tzinfo=timezone.get_default_timezone(),
+        )
+
+        with patch('food.services._local_now', return_value=current):
+            response = self.client.post(
+                reverse('reservation-list'),
+                {
+                    'reservations': [{
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                    }],
+                },
+                content_type='application/json',
+            )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(Reservation.objects.count(), 1)
 
     def test_weekly_menu_shows_current_catalog_price(self):
         original_menu_price = self.menu.food_price

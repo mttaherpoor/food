@@ -39,18 +39,26 @@ def validate_reservation_building(building: Building | None) -> Building:
 def _local_now():
     return timezone.localtime(timezone.now(),timezone.get_default_timezone())
 
+
+def reservation_deadline(menu: Menu, cutoff_hour: int) -> datetime:
+    return timezone.make_aware(
+        datetime.combine(menu.date - timedelta(days=1), time(hour=cutoff_hour)),
+        timezone.get_default_timezone(),
+    )
+
+
+def is_reservation_window_open(menu: Menu, cutoff_hour: int) -> bool:
+    now = _local_now()
+    return menu.date >= now.date() and now < reservation_deadline(menu, cutoff_hour)
+
+
 def validate_reservation_window(menu: Menu, cutoff_hour: int) -> None:
-    current_timezone = timezone.get_default_timezone()
     now = _local_now()
 
     if menu.date < now.date():
         raise ValidationError({'menu': 'رزرو برای روزهای گذشته امکان‌پذیر نیست.'})
-    cutoff = timezone.make_aware(
-        datetime.combine(menu.date - timedelta(days=1), time(hour=cutoff_hour)),
-        current_timezone,
-    )
-    if now >= cutoff:
-        raise ValidationError({'menu': 'مهلت رزرو تا ساعت 10 صبح روز قبل است.'})
+    if now >= reservation_deadline(menu, cutoff_hour):
+        raise ValidationError({'menu': f'مهلت رزرو تا ساعت {cutoff_hour:02d}:00 روز قبل است.'})
 
 
 class ReservationPricing:
