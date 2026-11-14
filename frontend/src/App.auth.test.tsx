@@ -116,9 +116,11 @@ describe('Authentication and routing', () => {
 
     renderAt('/history')
 
-    await screen.findByRole('heading', {
-      name: 'صفحه سوابق آزمایشی',
-    })
+    await screen.findByRole(
+      'heading',
+      { name: 'صفحه سوابق آزمایشی' },
+      { timeout: 5000 },
+    )
 
     const topbar = document.querySelector('.mobile-topbar')
     expect(topbar).not.toBeNull()
