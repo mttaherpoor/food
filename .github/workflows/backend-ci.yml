@@ -92,6 +92,8 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/secrets"
           printf '%s' "$DJANGO_SECRET_KEY" > "$GITHUB_WORKSPACE/secrets/django_secret_key.txt"
           chmod 600 "$GITHUB_WORKSPACE/secrets/django_secret_key.txt"
+          printf '%s' "$POSTGRES_PASSWORD" > "$GITHUB_WORKSPACE/secrets/postgres_password.txt"
+          chmod 600 "$GITHUB_WORKSPACE/secrets/postgres_password.txt"
 
       - name: Django system check
         run: uv run --no-sync python manage.py check
