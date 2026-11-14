@@ -13,7 +13,7 @@ import { getProfile, getProfileOptions } from '../api/endpoints'
 import type { CatalogItem, ProfileOption, Reservation, WeeklyMenu } from '../api/types'
 import EmptyState from '../components/ui/EmptyState'
 import ErrorMessage from '../components/ui/ErrorMessage'
-import LoadingRows from '../components/ui/LoadingRows'
+import WeekSkeleton from '../components/ui/WeekSkeleton'
 import CatalogMultiSelect from '../components/ui/CatalogMultiSelect'
 import type { CatalogQuantities } from '../components/ui/CatalogMultiSelect'
 import { buttonClass, iconButtonClass } from '../components/ui/buttonStyles'
@@ -60,50 +60,50 @@ export default function WeekPage() {
   const [filter, setFilter] = useState<'all' | 'reserved' | 'open'>('all')
 
   const startIso = dateToIso(weekStart)
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError('')
+  const requestId = useRef(0)
+
+  const fetchWeek = useCallback(async (id: number, week: string) => {
     try {
       const [weekMenus, sideItems, drinkItems] = await Promise.all([
-        api<WeeklyMenu[]>(`/reservations/weekly?start=${startIso}`),
+        api<WeeklyMenu[]>(`/reservations/weekly?start=${week}`),
         api<CatalogItem[]>('/sides'),
         api<CatalogItem[]>('/drinks'),
       ])
+
+      if (id !== requestId.current) return
+
       setMenus(weekMenus)
       setSides(sideItems)
       setDrinks(drinkItems)
     } catch (loadError) {
+      if (id !== requestId.current) return
       setError(getApiMessage(loadError))
     } finally {
-      setLoading(false)
+      if (id === requestId.current) {
+        setLoading(false)
+      }
     }
-  }, [startIso])
+  }, [])
+
+  const load = useCallback(async () => {
+    const id = ++requestId.current
+    setLoading(true)
+    setError('')
+    await fetchWeek(id, startIso)
+  }, [fetchWeek, startIso])
 
   useEffect(() => {
-    let active = true
+    const id = ++requestId.current
 
-    Promise.all([
-      api<WeeklyMenu[]>(`/reservations/weekly?start=${startIso}`),
-      api<CatalogItem[]>('/sides'),
-      api<CatalogItem[]>('/drinks'),
-    ])
-      .then(([weekMenus, sideItems, drinkItems]) => {
-        if (!active) return
-        setMenus(weekMenus)
-        setSides(sideItems)
-        setDrinks(drinkItems)
-      })
-      .catch((loadError: unknown) => {
-        if (active) setError(getApiMessage(loadError))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
+    void fetchWeek(id, startIso)
 
     return () => {
-      active = false
+      // Invalidate responses from the week that is being left.
+      if (requestId.current === id) {
+        requestId.current += 1
+      }
     }
-  }, [startIso])
+  }, [fetchWeek, startIso])
 
   const days = useMemo(() => Array.from({ length: 6 }, (_, index) => {
     const date = dateToIso(addDays(weekStart, index))
@@ -137,10 +137,27 @@ export default function WeekPage() {
 
       <div className="flex min-h-[58px] items-center justify-between gap-[14px] border-y border-line py-2 max-[680px]:flex-col-reverse max-[680px]:items-start max-[680px]:gap-[5px] max-[680px]:py-[10px]">
         <div className="flex items-center gap-[9px] max-[680px]:w-full max-[680px]:justify-between max-[680px]:gap-[3px]">
-          <button aria-label="هفتهٔ قبل" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, -7))} type="button"><ChevronRight size={18} /></button>
+          <button aria-label="هفتهٔ قبل" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => {
+            setLoading(true)
+            setError('')
+            requestId.current += 1
+            setWeekStart((value) => addDays(value, -7))
+          }} type="button"><ChevronRight size={18} /></button>
           <strong className="whitespace-nowrap text-sm max-[680px]:text-xs">{formatDate(startIso, { weekday: undefined })} <span className="mx-1 font-normal text-muted">تا</span> {formatDate(dateToIso(addDays(weekStart, 5)), { weekday: undefined })}</strong>
-          <button aria-label="هفتهٔ بعد" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => setWeekStart((value) => addDays(value, 7))} type="button"><ChevronLeft size={18} /></button>
-          <button className={buttonClass('primary', 'min-h-[36px] px-3 py-1.5 text-xs whitespace-nowrap max-[680px]:min-h-[34px] max-[680px]:px-2')} onClick={() => setWeekStart(getWeekStart(new Date()))} type="button">هفته جاری</button>
+          <button aria-label="هفتهٔ بعد" className={`${iconButtonClass} max-[680px]:h-[34px] max-[680px]:w-[34px]`} onClick={() => {
+            setLoading(true)
+            setError('')
+            requestId.current += 1
+            setWeekStart((value) => addDays(value, 7))
+          }} type="button"><ChevronLeft size={18} /></button>
+          <button className={buttonClass('primary', 'min-h-[36px] px-3 py-1.5 text-xs whitespace-nowrap max-[680px]:min-h-[34px] max-[680px]:px-2')} onClick={() => {
+            const currentWeek = getWeekStart(new Date())
+            if (dateToIso(currentWeek) === startIso) return
+            setLoading(true)
+            setError('')
+            requestId.current += 1
+            setWeekStart(currentWeek)
+          }} type="button">هفته جاری</button>
         </div>
         <div className="flex items-baseline gap-[7px] text-xs text-muted max-[680px]:self-start"><strong className="text-xl text-accent">{new Intl.NumberFormat('fa-IR').format(reservationCount)}</strong><span>رزرو فعال</span></div>
       </div>
@@ -152,7 +169,7 @@ export default function WeekPage() {
       </div>
 
       {error && <ErrorMessage message={error} onRetry={() => void load()} />}
-      {loading ? <LoadingRows /> : visibleDays.length === 0 ? <EmptyState title="روزی با این فیلتر پیدا نشد" detail="فیلتر دیگری را انتخاب کن." /> : (
+      {loading ? <WeekSkeleton /> : visibleDays.length === 0 ? <EmptyState title="روزی با این فیلتر پیدا نشد" detail="فیلتر دیگری را انتخاب کن." /> : (
         <div className="border-t border-line">
           {visibleDays.map(({ date, menu }, index) => (
             <DayRow
