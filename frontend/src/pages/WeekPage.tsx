@@ -194,7 +194,7 @@ function DayRow({ date, index, menu, onEdit }: { date: string; index: number; me
   const activeReservation = reservation?.status === 'res'
 
   return (
-    <article className={`grid min-h-[84px] grid-cols-[minmax(120px,0.8fr)_minmax(190px,1.55fr)_minmax(100px,0.7fr)_minmax(120px,auto)] items-center gap-[18px] border-b border-line px-1 py-[13px] max-[900px]:grid-cols-[minmax(105px,0.7fr)_minmax(160px,1.3fr)_minmax(85px,0.6fr)_auto] max-[900px]:gap-[10px] max-[680px]:grid-cols-[minmax(0,1fr)_auto] max-[680px]:gap-x-3 max-[680px]:gap-y-2 max-[680px]:px-[2px] max-[680px]:py-[14px] ${today ? "relative before:absolute before:inset-y-[15px] before:start-[-10px] before:w-[3px] before:rounded-[3px] before:bg-accent before:content-['']" : ""}${index > 4 ? " weekend" : ""}`}>
+    <article className={`grid min-h-[84px] grid-cols-[minmax(120px,0.8fr)_minmax(190px,1.55fr)_minmax(100px,0.7fr)_minmax(120px,auto)] items-center gap-[18px] border-b border-line px-1 py-[13px] max-[900px]:grid-cols-[minmax(105px,0.7fr)_minmax(160px,1.3fr)_minmax(85px,0.6fr)_auto] max-[900px]:gap-[10px] max-[680px]:grid-cols-[minmax(0,1fr)_auto] max-[680px]:gap-x-3 max-[680px]:gap-y-2 max-[680px]:px-[2px] max-[680px]:py-[14px] ${today ? "relative before:absolute before:inset-y-[15px] before:start-[-10px] before:w-[3px] before:rounded-[3px] before:bg-coral before:content-['']" : ""}${index > 4 ? " weekend" : ""}`}>
       <div className="flex min-w-0 flex-col gap-1 max-[680px]:col-start-1 max-[680px]:row-start-1 max-[680px]:flex-row max-[680px]:flex-wrap max-[680px]:items-baseline max-[680px]:gap-x-2">
         <strong className="text-sm max-[680px]:text-sm">{formatWeekday(date)}</strong>
         <span className="text-xs text-muted max-[680px]:text-xs">{formatDate(date, { weekday: undefined, month: 'short' })}</span>
@@ -230,7 +230,7 @@ function DayRow({ date, index, menu, onEdit }: { date: string; index: number; me
           <span className="h-2 w-2 rounded-full bg-[#92999d]" />
           <span>لغو شده</span>
         </> : menu ? <>
-          <span className="h-2 w-2 rounded-full bg-[#d49b38]" />
+          <span className={`h-2 w-2 rounded-full ${menu.can_reserve ? 'bg-coral' : 'bg-muted'}`} />
           <span>{menu.can_reserve ? 'رزرو نشده' : 'مهلت گذشته'}</span>
         </> : <span className="text-muted">—</span>}
       </div>

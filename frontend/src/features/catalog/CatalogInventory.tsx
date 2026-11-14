@@ -135,7 +135,7 @@ export default function CatalogInventory({
 
   return (
     <section
-      className="col-span-full min-w-0 rounded-xl border border-line bg-white dark:bg-surface p-[18px]"
+      className="col-span-full min-w-0 rounded-xl border border-line bg-surface p-[18px]"
       aria-labelledby="inventory-title"
     >
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
@@ -169,8 +169,8 @@ export default function CatalogInventory({
           )
 
           return (
-            <details key={kind} className="open:z-30 relative min-w-0 overflow-visible rounded-lg border border-[#d4e1e5] dark:border-line bg-white dark:bg-surface">
-              <summary className="cursor-pointer bg-[#edf3f5] dark:bg-raised px-4 py-4 text-sm font-semibold text-[#274d59] dark:text-ink hover:bg-[#e1edf1] dark:hover:bg-active">
+            <details key={kind} className="open:z-30 relative min-w-0 overflow-visible rounded-lg border border-line bg-surface">
+              <summary className="cursor-pointer bg-raised px-4 py-4 text-sm font-semibold text-ink hover:bg-active">
                 {title} ({filtered.length})
               </summary>
               <div className="px-3 pb-3">
@@ -278,7 +278,7 @@ export default function CatalogInventory({
                                   <img
                                     src={imagePreview || item.image_data.url}
                                     alt={`تصویر ${item.name}`}
-                                    className="h-24 w-24 rounded-xl border border-line bg-white dark:bg-surface object-cover"
+                                    className="h-24 w-24 rounded-xl border border-line bg-surface object-cover"
                                   />
 
                                   <div className="min-w-0 flex-1">

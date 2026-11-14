@@ -11,7 +11,7 @@ export default function QuantityField({ label, value, onChange }: { label: strin
   }
 
   return (
-    <div className="flex flex-col gap-2 text-sm font-semibold text-[#34393c] dark:text-ink">
+    <div className="flex flex-col gap-2 text-sm font-semibold text-ink">
       <label htmlFor={`quantity-${label}`}>{label}</label>
       <div className="flex w-fit max-w-full items-center gap-2" dir="ltr">
         <button

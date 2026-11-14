@@ -154,7 +154,7 @@ export default function MainShell({
     <div className="min-h-svh" dir="rtl">
       <aside className="sidebar fixed inset-y-0 start-0 z-[4] flex w-[236px] flex-col border-e border-line bg-surface px-[18px] pt-[26px] pb-[18px] max-[900px]:w-[205px] max-[680px]:hidden" aria-label="ناوبری اصلی">
         <BrandMark variant="sidebar" />
-        <p className="mx-[9px] mt-0 mb-[9px] text-xs text-[#858b8f]">سامانه</p>
+        <p className="mx-[9px] mt-0 mb-[9px] text-xs text-muted">سامانه</p>
         <nav className="grid gap-1">
           {items.map((item) => <NavButton key={item.key} item={item} active={page === item.key} onClick={() => onNavigate(item.key)} />)}
         </nav>
@@ -239,5 +239,5 @@ export default function MainShell({
 
 function NavButton({ item, active, onClick }: { item: { key: Page; label: string; icon: typeof CalendarDays }; active: boolean; onClick: () => void }) {
   const Icon = item.icon
-  return <button aria-current={active ? 'page' : undefined} className={`nav-button flex min-h-11 cursor-pointer items-center gap-[11px] rounded-[9px] border-0 bg-transparent px-[11px] text-right text-sm transition-colors max-[680px]:min-w-0 max-[680px]:min-h-[51px] max-[680px]:w-full max-[680px]:flex-col max-[680px]:items-center max-[680px]:justify-center max-[680px]:gap-[3px] max-[680px]:px-[2px] max-[680px]:py-[5px] max-[680px]:text-center max-[680px]:text-xs ${active ? 'bg-accent-soft font-semibold text-accent' : 'text-[#555d61] dark:text-muted hover:bg-raised'}`} onClick={onClick} type="button"><Icon aria-hidden="true" size={18} /><span>{item.label}</span></button>
+  return <button aria-current={active ? 'page' : undefined} className={`nav-button flex min-h-11 cursor-pointer items-center gap-[11px] rounded-[9px] border-0 bg-transparent px-[11px] text-right text-sm transition-colors max-[680px]:min-w-0 max-[680px]:min-h-[51px] max-[680px]:w-full max-[680px]:flex-col max-[680px]:items-center max-[680px]:justify-center max-[680px]:gap-[3px] max-[680px]:px-[2px] max-[680px]:py-[5px] max-[680px]:text-center max-[680px]:text-xs ${active ? 'bg-accent-soft font-semibold text-accent' : 'text-muted hover:bg-raised'}`} onClick={onClick} type="button"><Icon aria-hidden="true" size={18} /><span>{item.label}</span></button>
 }

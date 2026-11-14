@@ -190,18 +190,18 @@ export default function CatalogPage() {
     {notice && <p className="mb-[14px] rounded-[9px] border border-[#c9e5d7] dark:border-line bg-[#f0faf4] dark:bg-raised p-[14px] leading-[1.8] text-[#176441] dark:text-ink" role="status">{notice}</p>}
     {error && <ErrorMessage message={error} />}
     {loading ? <LoadingRows /> : <div className="grid gap-4">
-      <details className="open:z-30 relative group overflow-visible rounded-xl border border-[#cbdde2] dark:border-line bg-white dark:bg-surface">
-        <summary className="cursor-pointer bg-[#e4f0f3] dark:bg-active px-5 py-5 text-base font-bold text-[#164c5a] dark:text-ink hover:bg-[#d6e9ee] dark:hover:bg-active">
+      <details className="open:z-30 relative group overflow-visible rounded-xl border border-line bg-surface">
+        <summary className="cursor-pointer bg-accent-soft dark:bg-active px-5 py-5 text-base font-bold text-accent hover:bg-active">
           مدیریت منو
         </summary>
-        <div className="grid grid-cols-1 gap-3 bg-[#f4f8f9] dark:bg-raised p-4">
-      <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] dark:border-line bg-white dark:bg-surface">
-  <summary className="cursor-pointer border-b border-[#dce7ea] dark:border-line bg-[#edf3f5] dark:bg-raised px-5 py-4 text-sm font-semibold text-[#274d59] dark:text-ink hover:bg-[#e1edf1] dark:hover:bg-active">افزودن غذا</summary>
-<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white dark:bg-surface p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن غذا</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createFood(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] dark:text-ink !m-0 col-span-full">نام غذا<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] dark:border-line bg-white dark:bg-surface px-[13px] py-[10px] text-ink" onChange={(event) => setFoodName(event.target.value)} required value={foodName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] dark:text-ink !m-0">قیمت غذا (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] dark:border-line bg-white dark:bg-surface px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setFoodPrice(event.target.value)} required type="number" value={foodPrice} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] dark:text-ink !m-0">قیمت ظرف (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] dark:border-line bg-white dark:bg-surface px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setContainerPrice(event.target.value)} required type="number" value={containerPrice} /></label>
-<div className="col-span-full grid min-w-0 gap-3 rounded-xl border border-line bg-[#f4f8f9] dark:bg-raised p-3">
+        <div className="grid grid-cols-1 gap-3 bg-raised p-4">
+      <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-line bg-surface">
+  <summary className="cursor-pointer border-b border-line bg-raised px-5 py-4 text-sm font-semibold text-ink hover:bg-active">افزودن غذا</summary>
+<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-surface p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن غذا</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createFood(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-ink !m-0 col-span-full">نام غذا<input className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink" onChange={(event) => setFoodName(event.target.value)} required value={foodName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-ink !m-0">قیمت غذا (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setFoodPrice(event.target.value)} required type="number" value={foodPrice} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-ink !m-0">قیمت ظرف (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setContainerPrice(event.target.value)} required type="number" value={containerPrice} /></label>
+<div className="col-span-full grid min-w-0 gap-3 rounded-xl border border-line bg-raised p-3">
   <label
     htmlFor="new-food-image"
-    className="text-sm font-semibold text-[#34393c] dark:text-ink"
+    className="text-sm font-semibold text-ink"
   >
     تصویر غذا (اختیاری)
   </label>
@@ -211,7 +211,7 @@ export default function CatalogPage() {
     id="new-food-image"
     type="file"
     accept="image/jpeg,image/png,image/webp"
-    className="block w-full min-w-0 rounded-lg border border-line bg-white dark:bg-surface p-2 text-sm text-ink file:me-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#e4f0f3] file:text-[#164c5a] dark:file:bg-active dark:file:text-ink file:px-3 file:py-2"
+    className="block w-full min-w-0 rounded-lg border border-line bg-surface p-2 text-sm text-ink file:me-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:text-accent dark:file:bg-active dark:file:text-ink file:px-3 file:py-2"
     onChange={(event) => {
       const file = event.target.files?.[0] ?? null
       setFoodImage(file)
@@ -224,12 +224,12 @@ export default function CatalogPage() {
       <img
         src={foodImagePreview}
         alt="پیش‌نمایش تصویر غذای جدید"
-        className="h-28 w-28 rounded-xl border border-line bg-white dark:bg-surface object-cover"
+        className="h-28 w-28 rounded-xl border border-line bg-surface object-cover"
       />
 
       <button
         type="button"
-        className="min-h-10 rounded-lg border border-line bg-white dark:bg-surface px-4 text-sm"
+        className="min-h-10 rounded-lg border border-line bg-surface px-4 text-sm"
         onClick={() => {
           setFoodImage(null)
           setFoodImagePreview(null)
@@ -252,17 +252,17 @@ export default function CatalogPage() {
   افزودن غذا
 </button></form></section></div>
 </details>
-      <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] dark:border-line bg-white dark:bg-surface">
-  <summary className="cursor-pointer border-b border-[#dce7ea] dark:border-line bg-[#edf3f5] dark:bg-raised px-5 py-4 text-sm font-semibold text-[#274d59] dark:text-ink hover:bg-[#e1edf1] dark:hover:bg-active">ثبت منوی روز</summary>
-<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white dark:bg-surface p-[18px]"><h2 className="mt-0 mb-[15px] text-base">ثبت منوی روز</h2><form className="grid gap-3" onSubmit={(event) => void createMenu(event)}><fieldset className="flex min-w-0 flex-col gap-2 !m-0 border-0 p-0"><legend className="mb-2 text-sm font-semibold text-[#34393c] dark:text-ink">تاریخ</legend><JalaliDatePicker onChange={setMenuDate} required value={menuDate} /></fieldset><fieldset className="flex min-w-0 flex-col gap-2 !m-0 border-0 p-0"><legend className="mb-2 text-sm font-semibold text-[#34393c] dark:text-ink">غذای روز</legend><FoodPicker foods={foods} value={selectedFood} onChange={setSelectedFood} /></fieldset><button className={buttonClass('primary', '')} disabled={!foods.length} type="submit">ثبت منو</button></form></section></div>
+      <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-line bg-surface">
+  <summary className="cursor-pointer border-b border-line bg-raised px-5 py-4 text-sm font-semibold text-ink hover:bg-active">ثبت منوی روز</summary>
+<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-surface p-[18px]"><h2 className="mt-0 mb-[15px] text-base">ثبت منوی روز</h2><form className="grid gap-3" onSubmit={(event) => void createMenu(event)}><fieldset className="flex min-w-0 flex-col gap-2 !m-0 border-0 p-0"><legend className="mb-2 text-sm font-semibold text-ink">تاریخ</legend><JalaliDatePicker onChange={setMenuDate} required value={menuDate} /></fieldset><fieldset className="flex min-w-0 flex-col gap-2 !m-0 border-0 p-0"><legend className="mb-2 text-sm font-semibold text-ink">غذای روز</legend><FoodPicker foods={foods} value={selectedFood} onChange={setSelectedFood} /></fieldset><button className={buttonClass('primary', '')} disabled={!foods.length} type="submit">ثبت منو</button></form></section></div>
 </details>
-      <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-[#d4e1e5] dark:border-line bg-white dark:bg-surface">
-  <summary className="cursor-pointer border-b border-[#dce7ea] dark:border-line bg-[#edf3f5] dark:bg-raised px-5 py-4 text-sm font-semibold text-[#274d59] dark:text-ink hover:bg-[#e1edf1] dark:hover:bg-active">افزودن گزینهٔ جانبی</summary>
-<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-white dark:bg-surface p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن گزینهٔ جانبی</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createCatalogItem(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] dark:text-ink !m-0">نوع گزینه<select className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] dark:border-line bg-white dark:bg-surface px-[13px] py-[10px] text-ink" onChange={(event) => setKind(event.target.value as CatalogKind)} value={kind}><option value="sides">پیش‌غذا</option><option value="drinks">نوشیدنی</option></select></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] dark:text-ink !m-0">نام<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] dark:border-line bg-white dark:bg-surface px-[13px] py-[10px] text-ink" onChange={(event) => setItemName(event.target.value)} required value={itemName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-[#34393c] dark:text-ink !m-0 col-span-full">قیمت (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-[#d9dfe2] dark:border-line bg-white dark:bg-surface px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setItemPrice(event.target.value)} required type="number" value={itemPrice} /></label>
-<div className="col-span-full grid min-w-0 gap-3 rounded-xl border border-line bg-[#f4f8f9] dark:bg-raised p-3">
+      <details className="open:z-30 relative min-w-0 overflow-visible rounded-xl border border-line bg-surface">
+  <summary className="cursor-pointer border-b border-line bg-raised px-5 py-4 text-sm font-semibold text-ink hover:bg-active">افزودن گزینهٔ جانبی</summary>
+<div className="p-3 pt-0"><section className="min-w-0 rounded-xl border border-line bg-surface p-[18px]"><h2 className="mt-0 mb-[15px] text-base">افزودن گزینهٔ جانبی</h2><form className="grid grid-cols-1 gap-3 sm:grid-cols-2" onSubmit={(event) => void createCatalogItem(event)}><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-ink !m-0">نوع گزینه<select className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink" onChange={(event) => setKind(event.target.value as CatalogKind)} value={kind}><option value="sides">پیش‌غذا</option><option value="drinks">نوشیدنی</option></select></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-ink !m-0">نام<input className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink" onChange={(event) => setItemName(event.target.value)} required value={itemName} /></label><label className="flex flex-col gap-2 mb-[17px] text-sm font-semibold text-ink !m-0 col-span-full">قیمت (تومان)<input className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink" min={0} onChange={(event) => setItemPrice(event.target.value)} required type="number" value={itemPrice} /></label>
+<div className="col-span-full grid min-w-0 gap-3 rounded-xl border border-line bg-raised p-3">
   <label
     htmlFor="new-catalog-item-image"
-    className="text-sm font-semibold text-[#34393c] dark:text-ink"
+    className="text-sm font-semibold text-ink"
   >
     تصویر {kind === 'sides' ? 'پیش‌غذا' : 'نوشیدنی'} (اختیاری)
   </label>
@@ -272,7 +272,7 @@ export default function CatalogPage() {
     id="new-catalog-item-image"
     type="file"
     accept="image/jpeg,image/png,image/webp"
-    className="block w-full min-w-0 rounded-lg border border-line bg-white dark:bg-surface p-2 text-sm text-ink file:me-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-[#e4f0f3] file:text-[#164c5a] dark:file:bg-active dark:file:text-ink file:px-3 file:py-2"
+    className="block w-full min-w-0 rounded-lg border border-line bg-surface p-2 text-sm text-ink file:me-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-accent-soft file:text-accent dark:file:bg-active dark:file:text-ink file:px-3 file:py-2"
     onChange={(event) => {
       const file = event.target.files?.[0] ?? null
       setItemImage(file)
@@ -285,11 +285,11 @@ export default function CatalogPage() {
       <img
         src={itemImagePreview}
         alt="پیش‌نمایش تصویر گزینه جانبی"
-        className="h-28 w-28 rounded-xl border border-line bg-white dark:bg-surface object-cover"
+        className="h-28 w-28 rounded-xl border border-line bg-surface object-cover"
       />
       <button
         type="button"
-        className="min-h-10 rounded-lg border border-line bg-white dark:bg-surface px-4 text-sm"
+        className="min-h-10 rounded-lg border border-line bg-surface px-4 text-sm"
         onClick={() => {
           setItemImage(null)
           setItemImagePreview(null)
@@ -314,11 +314,11 @@ export default function CatalogPage() {
 </details>
       </div>
       </details>
-      <details className="open:z-30 relative group overflow-visible rounded-xl border border-[#cbdde2] dark:border-line bg-white dark:bg-surface">
-        <summary className="cursor-pointer bg-[#e4f0f3] dark:bg-active px-5 py-5 text-base font-bold text-[#164c5a] dark:text-ink hover:bg-[#d6e9ee] dark:hover:bg-active">
+      <details className="open:z-30 relative group overflow-visible rounded-xl border border-line bg-surface">
+        <summary className="cursor-pointer bg-accent-soft dark:bg-active px-5 py-5 text-base font-bold text-accent hover:bg-active">
           فهرست کاتالوگ
         </summary>
-        <div className="grid gap-3 bg-[#f4f8f9] dark:bg-raised p-4">
+        <div className="grid gap-3 bg-raised p-4">
           <CatalogSummary foods={foods} sides={sides} drinks={drinks} />
       <CatalogInventory
         foods={foods}
@@ -340,7 +340,7 @@ function CatalogSummary({ foods, sides, drinks }: { foods: CatalogItem[]; sides:
   return (
     <section
       aria-label="کاتالوگ موجود"
-      className="col-span-full flex min-w-0 items-center justify-between gap-[18px] rounded-xl border border-line bg-white dark:bg-surface p-[18px] max-[680px]:col-auto max-[680px]:flex-col max-[680px]:items-start"
+      className="col-span-full flex min-w-0 items-center justify-between gap-[18px] rounded-xl border border-line bg-surface p-[18px] max-[680px]:col-auto max-[680px]:flex-col max-[680px]:items-start"
     >
       <h2 className="m-0 text-base">کاتالوگ موجود</h2>
       <div className="flex flex-wrap gap-[18px] text-[13px] text-muted max-[680px]:gap-3">

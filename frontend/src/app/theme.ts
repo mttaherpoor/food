@@ -37,7 +37,7 @@ function applyTheme(theme: Theme): void {
   )
 
   if (meta) {
-    meta.content = theme === 'dark' ? '#101820' : '#f9fbfc'
+    meta.content = theme === 'dark' ? '#101B23' : '#F5F8F9'
   }
 
   window.dispatchEvent(
