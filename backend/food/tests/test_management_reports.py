@@ -360,7 +360,7 @@ class ManagementReportTests(TestCase):
 
         # Deliberately create records in an order different
         # from the required Excel sorting order.
-        _, later_item = reserve(
+        _, _later_item = reserve(
             '0001', second_day, building_02, '02',
         )
         _, high_number_item = reserve(

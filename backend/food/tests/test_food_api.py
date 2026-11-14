@@ -1,7 +1,6 @@
 from django.contrib.auth.models import Group
+from django.test import TestCase
 from django.urls import reverse
-
-import pytest
 
 from core.models import Building, CustomUser, Department
 from core.roles import HR_FOOD_ROLE
@@ -19,103 +18,94 @@ def create_hr_food_user() -> CustomUser:
     return user
 
 
-@pytest.mark.django_db
-def test_hr_food_can_create_food_but_cannot_supply_total_price(client):
-    client.force_login(create_hr_food_user())
+class FoodAPITests(TestCase):
 
-    response = client.post(
-        reverse('food-list'),
-        {
-            'name': 'Ghormeh sabzi',
-            'price': 1_000_000,
-            'container_price': 100_000,
-            'total_price': 1,
-        },
-    )
+    def test_hr_food_can_create_food_but_cannot_supply_total_price(self):
+        self.client.force_login(create_hr_food_user())
 
-    assert response.status_code == 201
-    assert response.json()['total_price'] == 1_100_000
-    assert Food.objects.get().total_price == 1_100_000
+        response = self.client.post(
+            reverse('food-list'),
+            {
+                'name': 'Ghormeh sabzi',
+                'price': 1_000_000,
+                'container_price': 100_000,
+                'total_price': 1,
+            },
+        )
 
+        assert response.status_code == 201
+        assert response.json()['total_price'] == 1_100_000
+        assert Food.objects.get().total_price == 1_100_000
 
-@pytest.mark.django_db
-def test_hr_food_can_create_side_and_drink(client):
-    client.force_login(create_hr_food_user())
+    def test_hr_food_can_create_side_and_drink(self):
+        self.client.force_login(create_hr_food_user())
 
-    side_response = client.post(reverse('side-list'), {'name': 'Salad', 'price': 200_000})
-    drink_response = client.post(reverse('drink-list'), {'name': 'Doogh', 'price': 150_000})
+        side_response = self.client.post(reverse('side-list'), {'name': 'Salad', 'price': 200_000})
+        drink_response = self.client.post(reverse('drink-list'), {'name': 'Doogh', 'price': 150_000})
 
-    assert side_response.status_code == 201
-    assert drink_response.status_code == 201
+        assert side_response.status_code == 201
+        assert drink_response.status_code == 201
 
+    def test_menu_defaults_to_available_and_exposes_food_name(self):
+        self.client.force_login(create_hr_food_user())
+        food = Food.objects.create(name='Ghormeh sabzi', price=1_000_000, container_price=100_000)
 
-@pytest.mark.django_db
-def test_menu_defaults_to_available_and_exposes_food_name(client):
-    client.force_login(create_hr_food_user())
-    food = Food.objects.create(name='Ghormeh sabzi', price=1_000_000, container_price=100_000)
+        response = self.client.post(
+            reverse('menu-list'),
+            {'date': '2026-11-05', 'food': food.pk},
+        )
 
-    response = client.post(
-        reverse('menu-list'),
-        {'date': '2026-11-05', 'food': food.pk},
-    )
+        assert response.status_code == 201
+        assert response.json()['status'] == MenuStatus.AVAILABLE
+        assert response.json()['food_name'] == 'Ghormeh sabzi'
 
-    assert response.status_code == 201
-    assert response.json()['status'] == MenuStatus.AVAILABLE
-    assert response.json()['food_name'] == 'Ghormeh sabzi'
+    def test_menu_rejects_unknown_status(self):
+        self.client.force_login(create_hr_food_user())
+        food = Food.objects.create(name='Ghormeh sabzi', price=1_000_000, container_price=100_000)
 
+        response = self.client.post(
+            reverse('menu-list'),
+            {'date': '2026-11-05', 'food': food.pk, 'status': 'bad'},
+        )
 
-@pytest.mark.django_db
-def test_menu_rejects_unknown_status(client):
-    client.force_login(create_hr_food_user())
-    food = Food.objects.create(name='Ghormeh sabzi', price=1_000_000, container_price=100_000)
+        assert response.status_code == 400
+        assert 'status' in response.json()
 
-    response = client.post(
-        reverse('menu-list'),
-        {'date': '2026-11-05', 'food': food.pk, 'status': 'bad'},
-    )
+    def test_catalog_rejects_negative_price(self):
+        self.client.force_login(create_hr_food_user())
 
-    assert response.status_code == 400
-    assert 'status' in response.json()
+        response = self.client.post(
+            reverse('food-list'),
+            {'name': 'Invalid food', 'price': -1, 'container_price': 100_000},
+        )
 
+        assert response.status_code == 400
+        assert 'price' in response.json()
 
-@pytest.mark.django_db
-def test_catalog_rejects_negative_price(client):
-    client.force_login(create_hr_food_user())
+    def test_employee_can_read_catalog_but_cannot_manage_it(self):
+        Building.objects.get_or_create(
+            number='07',
+            defaults={'is_active': True},
+        )
+        Department.objects.get_or_create(
+            number='003',
+            defaults={'is_active': True},
+        )
 
-    response = client.post(
-        reverse('food-list'),
-        {'name': 'Invalid food', 'price': -1, 'container_price': 100_000},
-    )
+        employee = create_employee(
+            personnel_number='001234',
+            building_number='07',
+            department_number='003',
+        )
+        employee.must_change_password = False
+        employee.save(update_fields=('must_change_password',))
+        self.client.force_login(employee)
 
-    assert response.status_code == 400
-    assert 'price' in response.json()
+        read_response = self.client.get(reverse('food-list'))
+        write_response = self.client.post(
+            reverse('food-list'),
+            {'name': 'New food', 'price': 10, 'container_price': 1},
+        )
 
-
-@pytest.mark.django_db
-def test_employee_can_read_catalog_but_cannot_manage_it(client):
-    Building.objects.get_or_create(
-        number='07',
-        defaults={'is_active': True},
-    )
-    Department.objects.get_or_create(
-        number='003',
-        defaults={'is_active': True},
-    )
-
-    employee = create_employee(
-        personnel_number='001234',
-        building_number='07',
-        department_number='003',
-    )
-    employee.must_change_password = False
-    employee.save(update_fields=('must_change_password',))
-    client.force_login(employee)
-
-    read_response = client.get(reverse('food-list'))
-    write_response = client.post(
-        reverse('food-list'),
-        {'name': 'New food', 'price': 10, 'container_price': 1},
-    )
-
-    assert read_response.status_code == 200
-    assert write_response.status_code == 403
+        assert read_response.status_code == 200
+        assert write_response.status_code == 403
