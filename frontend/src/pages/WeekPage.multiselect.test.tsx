@@ -124,16 +124,41 @@ describe('WeekPage multi-selection integration', () => {
       ).toHaveValue('7')
     })
 
-    for (const name of [
-      'افزودن پیش‌غذا (اختیاری) سالاد',
-      'افزودن پیش‌غذا (اختیاری) سالاد',
-      'افزودن پیش‌غذا (اختیاری) ماست و موسیر',
-      'افزودن نوشیدنی (اختیاری) دوغ',
-      'افزودن نوشیدنی (اختیاری) آبمیوه',
-      'افزودن نوشیدنی (اختیاری) آبمیوه',
-    ]) {
-      await user.click(screen.getByRole('button', { name }))
-    }
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزودن پیش‌غذا (اختیاری) سالاد',
+      }),
+    )
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزایش تعداد پیش‌غذا (اختیاری) سالاد',
+      }),
+    )
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزودن پیش‌غذا (اختیاری) ماست و موسیر',
+      }),
+    )
+
+    await user.click(
+      screen.getByRole('tab', { name: /^نوشیدنی/ }),
+    )
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزودن نوشیدنی (اختیاری) دوغ',
+      }),
+    )
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزودن نوشیدنی (اختیاری) آبمیوه',
+      }),
+    )
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزایش تعداد نوشیدنی (اختیاری) آبمیوه',
+      }),
+    )
 
     await user.click(
       screen.getByRole('button', { name: 'ثبت رزرو' }),
@@ -257,15 +282,32 @@ describe('WeekPage multi-selection integration', () => {
       screen.getByLabelText('تعداد پیش‌غذا (اختیاری) ماست و موسیر'),
     ).toHaveTextContent('1')
 
+    // Switch tabs and verify that existing quantities are retained.
+    await user.click(
+      screen.getByRole('tab', { name: /^نوشیدنی/ }),
+    )
+
     expect(
       screen.getByLabelText('تعداد نوشیدنی (اختیاری) دوغ'),
     ).toHaveTextContent('1')
 
-    // Remove one item, then add another drink.
+    await user.click(
+      screen.getByRole('tab', { name: /^پیش‌غذا/ }),
+    )
+
+    expect(
+      screen.getByLabelText('تعداد پیش‌غذا (اختیاری) سالاد'),
+    ).toHaveTextContent('2')
+
+    // Remove one side using the dedicated delete button.
     await user.click(
       screen.getByRole('button', {
-        name: 'کاهش پیش‌غذا (اختیاری) ماست و موسیر',
+        name: 'حذف پیش‌غذا (اختیاری) ماست و موسیر',
       }),
+    )
+
+    await user.click(
+      screen.getByRole('tab', { name: /^نوشیدنی/ }),
     )
 
     await user.click(

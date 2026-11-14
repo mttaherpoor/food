@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -265,10 +265,15 @@ describe('ReservationDialog building selection', () => {
       expect(buildingSelect).toHaveValue('8')
     })
 
-    fireEvent.change(
-      screen.getByRole('spinbutton', { name: 'تعداد غذا' }),
-      { target: { value: '2' } },
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزایش تعداد غذا',
+      }),
     )
+
+    expect(
+      screen.getByLabelText('تعداد غذای انتخاب‌شده'),
+    ).toHaveTextContent('2')
 
     await user.click(
       screen.getByRole('button', { name: 'ذخیرهٔ ویرایش' }),
@@ -484,10 +489,15 @@ describe('ReservationDialog building selection', () => {
       }),
     ).toBeInTheDocument()
 
-    fireEvent.change(
-      screen.getByRole('spinbutton', { name: 'تعداد غذا' }),
-      { target: { value: '2' } },
+    await user.click(
+      screen.getByRole('button', {
+        name: 'افزایش تعداد غذا',
+      }),
     )
+
+    expect(
+      screen.getByLabelText('تعداد غذای انتخاب‌شده'),
+    ).toHaveTextContent('2')
 
     await user.click(
       screen.getByRole('button', { name: 'ذخیرهٔ ویرایش' }),
@@ -548,6 +558,16 @@ describe('ReservationDialog building selection', () => {
         name: 'افزودن پیش‌غذا (اختیاری) سالاد',
       }),
     )
+    expect(
+      screen.getByLabelText('تعداد پیش‌غذا (اختیاری) سالاد'),
+    ).toHaveTextContent('1')
+
+    await user.click(
+      screen.getByRole('tab', {
+        name: /^نوشیدنی/,
+      }),
+    )
+
     await user.click(
       screen.getByRole('button', {
         name: 'افزودن نوشیدنی (اختیاری) دوغ',
@@ -555,8 +575,25 @@ describe('ReservationDialog building selection', () => {
     )
 
     expect(
+      screen.getByLabelText('تعداد نوشیدنی (اختیاری) دوغ'),
+    ).toHaveTextContent('1')
+
+    // Switching tabs must not clear the selected drink.
+    await user.click(
+      screen.getByRole('tab', {
+        name: /^پیش‌غذا/,
+      }),
+    )
+
+    expect(
       screen.getByLabelText('تعداد پیش‌غذا (اختیاری) سالاد'),
     ).toHaveTextContent('1')
+
+    await user.click(
+      screen.getByRole('tab', {
+        name: /^نوشیدنی/,
+      }),
+    )
 
     expect(
       screen.getByLabelText('تعداد نوشیدنی (اختیاری) دوغ'),

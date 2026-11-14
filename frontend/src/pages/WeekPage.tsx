@@ -16,7 +16,6 @@ import ErrorMessage from '../components/ui/ErrorMessage'
 import LoadingRows from '../components/ui/LoadingRows'
 import CatalogMultiSelect from '../components/ui/CatalogMultiSelect'
 import type { CatalogQuantities } from '../components/ui/CatalogMultiSelect'
-import QuantityField from '../components/ui/QuantityField'
 import { buttonClass, iconButtonClass } from '../components/ui/buttonStyles'
 import { addDays, dateToIso, formatDate, formatWeekday, getWeekStart } from '../utils/date'
 import { getApiMessage } from '../utils/errors'
@@ -459,6 +458,9 @@ function ReservationDialog({
     }
   }
 
+  const [activeCatalogTab, setActiveCatalogTab] =
+    useState<'side' | 'drink'>('side')
+
   async function cancelReservation() {
     if (!menu.reservation) return
     setCanceling(true)
@@ -475,7 +477,7 @@ function ReservationDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-10 grid place-items-center overflow-y-auto bg-[#10232b80] p-5">
+    <div className="fixed inset-0 z-10 grid place-items-center overflow-hidden bg-[#10232b80] p-3 sm:p-5">
       <button
         type="button"
         aria-label="بستن پنجره رزرو با کلیک روی پس‌زمینه"
@@ -483,17 +485,141 @@ function ReservationDialog({
         onClick={onClose}
         tabIndex={-1}
       />
-      <section aria-labelledby="reservation-dialog-title" aria-modal="true" className="relative z-10 w-full max-w-[480px] max-h-[min(90svh,760px)] overflow-y-auto rounded-2xl border border-line bg-surface text-ink p-[22px] shadow-[0_20px_70px_#09252d33] max-[680px]:max-h-[88svh] max-[680px]:self-end max-[680px]:rounded-t-2xl max-[680px]:rounded-b-[10px] max-[680px]:p-[19px]" ref={dialogRef} tabIndex={-1} role="dialog">
-        <div className="flex items-start justify-between gap-3 border-b border-line pb-[17px]">
+      <section aria-labelledby="reservation-dialog-title" aria-modal="true" className="relative z-10 flex w-full max-w-[480px] max-h-[calc(100dvh-16px)] sm:max-h-[min(90dvh,760px)] flex-col overflow-hidden rounded-2xl border border-line bg-surface text-ink p-[22px] shadow-[0_20px_70px_#09252d33] max-[680px]:max-h-[calc(100dvh-16px)] max-[680px]:self-center max-[680px]:rounded-t-2xl max-[680px]:rounded-b-[10px] max-[680px]:p-3 min-h-0" ref={dialogRef} tabIndex={-1} role="dialog">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line pb-[17px]">
           <div><p className="mt-0 mb-[3px] text-xs font-bold text-accent">{formatDate(menu.date)}</p><h2 className="m-0 text-xl" id="reservation-dialog-title">{saved ? 'رزرو ثبت شد' : cancelled ? 'رزرو لغو شد' : menu.food_name}</h2></div>
           <button aria-label="بستن" className={iconButtonClass} onClick={onClose} type="button"><X size={19} /></button>
         </div>
-        {saved || cancelled ? <div className="rounded-[9px] border border-[#c9e5d7] bg-[#f0faf4] p-[14px] leading-[1.8] text-[#176441] dark:border-positive/40 dark:bg-raised dark:text-positive" role="status">{saved ? 'انتخابت برای این روز ثبت شد.' : 'رزرو این روز لغو شد و در سوابق باقی ماند.'}</div> : <form className="grid gap-[11px] pt-4" onSubmit={save}>
-          <p className="m-0 flex justify-between gap-[10px] py-[11px] text-[13px] text-muted">غذای روز <strong className="text-ink">{formatMoney(menu.food_price)}</strong></p>
-          <label className="m-0 flex flex-col gap-2 text-sm font-semibold text-ink">
-            ساختمان محل تحویل
+        {saved || cancelled ? <div className="rounded-[9px] border border-[#c9e5d7] bg-[#f0faf4] p-[14px] leading-[1.8] text-[#176441] dark:border-positive/40 dark:bg-raised dark:text-positive" role="status">{saved ? 'انتخابت برای این روز ثبت شد.' : 'رزرو این روز لغو شد و در سوابق باقی ماند.'}</div> : <form className="flex min-h-0 flex-1 flex-col overflow-hidden" onSubmit={save}>
+  <div className="min-h-0 flex-1 space-y-[11px] overflow-y-auto overscroll-y-contain pt-4 pe-1">
+<div className="grid min-w-0 grid-cols-2 items-center gap-3">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-ink">
+                تعداد غذا
+              </span>
+
+              <div
+                role="group"
+                aria-label="تعداد غذا"
+                className="flex shrink-0 items-center gap-1"
+              >
+                <button
+                  type="button"
+                  aria-label="کاهش تعداد غذا"
+                  disabled={saving || canceling || foodQuantity <= 1}
+                  onClick={() => setFoodQuantity(Math.max(1, foodQuantity - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-ink disabled:opacity-40"
+                >
+                  −
+                </button>
+
+                <output
+                  aria-label="تعداد غذای انتخاب‌شده"
+                  className="min-w-5 text-center text-sm font-semibold tabular-nums text-ink"
+                >
+                  {foodQuantity}
+                </output>
+
+                <button
+                  type="button"
+                  aria-label="افزایش تعداد غذا"
+                  disabled={saving || canceling || foodQuantity >= 99}
+                  onClick={() => setFoodQuantity(Math.min(99, foodQuantity + 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-line bg-surface text-ink disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-ink">
+                قیمت غذا
+              </span>
+
+              <strong className="text-sm font-semibold text-ink">
+                {formatMoney(menu.food_price)}
+              </strong>
+            </div>
+          </div>
+          <div className="min-w-0 overflow-hidden rounded-xl border border-line bg-surface p-3">
+            <div
+              role="tablist"
+              aria-label="انتخاب پیش‌غذا و نوشیدنی"
+              className="mb-3 grid grid-cols-2 gap-1 rounded-lg bg-raised p-1"
+            >
+              <button
+                type="button"
+                role="tab"
+                id="reservation-side-tab"
+                aria-controls="reservation-catalog-panel"
+                aria-selected={activeCatalogTab === 'side'}
+                onClick={() => setActiveCatalogTab('side')}
+                className={`min-h-10 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+                  activeCatalogTab === 'side'
+                    ? 'bg-surface text-ink shadow-sm'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                پیش‌غذا
+                <span className="ms-1 text-xs">
+                  ({Object.values(sideQuantities).filter((quantity) => quantity > 0).length})
+                </span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                id="reservation-drink-tab"
+                aria-controls="reservation-catalog-panel"
+                aria-selected={activeCatalogTab === 'drink'}
+                onClick={() => setActiveCatalogTab('drink')}
+                className={`min-h-10 rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+                  activeCatalogTab === 'drink'
+                    ? 'bg-surface text-ink shadow-sm'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                نوشیدنی
+                <span className="ms-1 text-xs">
+                  ({Object.values(drinkQuantities).filter((quantity) => quantity > 0).length})
+                </span>
+              </button>
+            </div>
+
+            <div
+              id="reservation-catalog-panel"
+              role="tabpanel"
+              aria-labelledby={
+                activeCatalogTab === 'side'
+                  ? 'reservation-side-tab'
+                  : 'reservation-drink-tab'
+              }
+              className="min-w-0"
+            >
+              {activeCatalogTab === 'side' ? (
+                <CatalogMultiSelect
+                  label="پیش‌غذا (اختیاری)"
+                  items={sides}
+                  quantities={sideQuantities}
+                  onChange={setSideQuantities}
+                  disabled={saving || canceling}
+                />
+              ) : (
+                <CatalogMultiSelect
+                  label="نوشیدنی (اختیاری)"
+                  items={drinks}
+                  quantities={drinkQuantities}
+                  onChange={setDrinkQuantities}
+                  disabled={saving || canceling}
+                />
+              )}
+            </div>
+          </div>
+          <label className="m-0 grid min-w-0 grid-cols-2 items-center gap-3 text-sm font-semibold text-ink">
+            <span className="min-w-0 text-center leading-6">ساختمان محل تحویل</span>
             <select
-              className="min-h-[46px] w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink"
+              className="min-h-[46px] min-w-0 w-full rounded-[9px] border border-line bg-surface px-[13px] py-[10px] text-ink"
               disabled={buildingLoading || Boolean(buildingLoadError)}
               onChange={(event) => setBuilding(event.target.value)}
               required
@@ -523,27 +649,15 @@ function ReservationDialog({
               دریافت ساختمان‌ها ناموفق بود: {buildingLoadError}
             </p>
           )}
-          <QuantityField label="تعداد غذا" value={foodQuantity} onChange={setFoodQuantity} />
-          <CatalogMultiSelect
-            label="پیش‌غذا (اختیاری)"
-            items={sides}
-            quantities={sideQuantities}
-            onChange={setSideQuantities}
-            disabled={saving || canceling}
-          />
-          <CatalogMultiSelect
-            label="نوشیدنی (اختیاری)"
-            items={drinks}
-            quantities={drinkQuantities}
-            onChange={setDrinkQuantities}
-            disabled={saving || canceling}
-          />
-          <div className="mt-1 flex justify-between gap-[10px] border-t border-line py-[11px] text-sm text-muted"><span>جمع این انتخاب</span><strong className="text-ink">{formatMoney(total)}</strong></div>
+  </div>
+  <div className="z-10 shrink-0 space-y-2 border-t border-line bg-surface pt-2">
+<div className="mt-1 flex justify-between gap-[10px] border-t border-line py-[11px] text-sm text-muted"><span>جمع این انتخاب</span><strong className="text-ink">{formatMoney(total)}</strong></div>
           {error && <p className="mb-[15px] rounded-[9px] border border-[#f0c9cb] bg-[#fff4f4] px-[14px] py-3 text-sm leading-[1.7] text-[#8b242a] dark:border-negative/40 dark:bg-raised dark:text-negative" role="alert">{error}</p>}
           <button className={buttonClass('primary', 'w-full')} disabled={saving || canceling || buildingLoading || Boolean(buildingLoadError)} type="submit">{saving ? 'در حال ثبت…' : menu.reservation?.status === 'can' ? 'ثبت رزرو مجدد' : menu.reservation ? 'ذخیرهٔ ویرایش' : 'ثبت رزرو'}</button>
           {menu.reservation?.status === 'res' && <button className={buttonClass('dangerQuiet', '')} disabled={saving || canceling} onClick={() => void cancelReservation()} type="button">{canceling ? 'در حال لغو…' : 'لغو غذای این روز'}</button>}
           <p className="mt-px mb-0 text-center text-[11px] text-muted">مهلت رزرو و ویرایش تا ساعت ۱۰ صبح روز قبل است.</p>
-        </form>}
+  </div>
+</form>}
       </section>
     </div>
   )

@@ -69,7 +69,7 @@ describe('CatalogMultiSelect', () => {
 
     await user.click(
       screen.getByRole('button', {
-        name: 'افزودن پیش‌غذا سالاد',
+        name: 'افزایش تعداد پیش‌غذا سالاد',
       }),
     )
 
@@ -97,14 +97,20 @@ describe('CatalogMultiSelect', () => {
     ).toHaveTextContent('1')
   })
 
-  it('removes a product when its quantity reaches zero', async () => {
+  it('removes a product using the delete button', async () => {
     const user = userEvent.setup()
 
     render(<Harness initial={{ 11: 1, 12: 2 }} />)
 
-    await user.click(
+    expect(
       screen.getByRole('button', {
         name: 'کاهش پیش‌غذا سالاد',
+      }),
+    ).toBeDisabled()
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'حذف پیش‌غذا سالاد',
       }),
     )
 
@@ -116,9 +122,9 @@ describe('CatalogMultiSelect', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'کاهش پیش‌غذا سالاد',
+        name: 'افزودن پیش‌غذا سالاد',
       }),
-    ).toBeDisabled()
+    ).toBeEnabled()
   })
 
   it('respects the maximum quantity and disabled state', async () => {
@@ -128,7 +134,7 @@ describe('CatalogMultiSelect', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'افزودن پیش‌غذا سالاد',
+        name: 'افزایش تعداد پیش‌غذا سالاد',
       }),
     ).toBeDisabled()
 
