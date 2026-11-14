@@ -1,227 +1,122 @@
-# فودسک | Foodesk
+# Foodesk | فودسک
 
-سامانه رزرو غذای سازمانی با رابط فارسی و راست‌به‌چپ (RTL)، مبتنی بر Django REST Framework و React.
+**Organizational Food Reservation System** — a Persian, RTL web application for employee meal reservations.
 
-## فهرست مستندات
+**Language:** English | [فارسی](README-fa.md)
 
-- [Backend](#backend)
-- [Excel Import](#excel-sample-data)
-- [Frontend](#frontend)
-- [Authentication](#authentication)
-- [Secrets](#secrets)
-- [Branding](#مدیریت-branding)
-- [Environment](#متغیرهای-محیطی)
-- [Testing](#تست-و-کیفیت-کد)
-- [Production](#ملاحظات-production)
+## Technology stack
 
-## Backend
-
-Django REST Framework API for the food reservation system.
-
-## Local Docker development
-
-1. Copy each `secrets/*.example.txt` file to its corresponding `*.txt` file
-   and replace the placeholder with a strong local value.
-2. Optionally copy `.env.example` to `.env` for non-sensitive configuration.
-3. Start the services with `docker compose up --build` from the repository root.
-4. Open `/api/v1/health`, `/api/v1/schema`, or `/api/v1/docs` on port 8000.
-
-Employees can read their own reservation history at `GET /api/v1/reservations`.
-The weekly menu is available at `GET /api/v1/reservations/weekly?start=YYYY-MM-DD`.
-HR and Viewer can read the daily summary at
-`GET /api/v1/reports/daily?from=YYYY-MM-DD&to=YYYY-MM-DD`. Viewer access to food,
-side, drink, and menu catalogs is read-only.
-
-Database migrations are intentionally not applied automatically by the image.
-Run them only as an explicit reviewed operation.
-
-## Excel sample data
-
-Catalog prices are whole amounts in Toman.
-
-Validate the sample workbooks without changing the database:
-
-```bash
-python manage.py import_employees sample_data/sample_employees.xlsx --dry-run
-python manage.py import_catalog sample_data/sample_catalog.xlsx --dry-run
-python manage.py import_monthly_menu sample_data/sample_monthly_menu.xlsx --dry-run
-```
-
-Remove `--dry-run` to import the records. Imports are create-only and atomic: an
-invalid or existing personnel number or catalog name prevents the entire workbook from being
-written. Employee passwords initially equal their personnel numbers and must be
-changed at first sign-in.
-
-The employee workbook contains personnel number, building number, department
-number, and active status. Employee names are not imported.
-
-Monthly menu workbooks contain exactly three sheets: `Foods`, `Sides`, and
-`Drinks`. The `Foods` columns are `date`, `name`, `price_toman`,
-`container_price_toman`, and `special_container_price_toman`. Dates may be Excel
-dates or `YYYY-MM-DD`; food names must already exist in the food catalog. The
-menu price is the food price plus the higher of the two container prices. The
-`Sides` and `Drinks` sheets use `name` and `price_toman`; new options are added
-to the catalog and existing names with changed prices are rejected. Duplicate
-menu dates in the workbook are rejected. Existing matching menu dates and prices
-are left unchanged so reimporting the same file is safe; a date with different
-food or price is rejected instead of overwriting menu history. Import is atomic
-and supports `--dry-run`.
-
----
-
-## Frontend
-
-> نکته: توضیحات استقرار Nginx در مستندات قبلی وجود داشته است.
-> این بخش باید پیش از استفاده عملیاتی با Docker Compose فعلی تطبیق داده شود.
-
-The frontend is a Persian, right-to-left React PWA built with Vite and TypeScript.
+- **Backend:** Python 3.13, Django 6.1, Django REST Framework, Django Unfold, drf-spectacular
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS 4, Axios, pnpm; responsive RTL PWA
+- **Database:** PostgreSQL 17
+- **Local infrastructure:** Docker Compose, Docker secrets, persistent volumes
+- **Calendar:** Jalali-facing date inputs and Excel reporting; API query dates use `YYYY-MM-DD` where specified
 
 ## Local development
 
-Frontend با React، TypeScript، Vite و Tailwind CSS 4 توسعه داده شده است.
+The supplied `docker-compose.yml` targets **development**, not production. The frontend uses the **Vite development server**, not Nginx, and Django runs with `runserver`.
 
-در Docker Compose فعلی، Frontend با Vite Development Server
-روی پورت `5173` اجرا می‌شود. Nginx در این Compose وجود ندارد.
-
-برای راه‌اندازی از ریشه پروژه:
-
-1. فایل‌های Secret را با استفاده از نمونه‌های `secrets/` ایجاد کنید.
-2. فایل `.env.example` را به `.env` کپی و تنظیم کنید.
-3. شبکه `shared_net` را در صورت نبود ایجاد کنید.
-4. پوشه `/opt/food/media` را روی میزبان ایجاد کنید.
-5. دستور `docker compose up --build -d` را اجرا کنید.
-6. Migrationها را با دستور زیر اعمال کنید:
-
-`docker compose exec -T backend python manage.py migrate`
-
-آدرس‌های Development:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:8000`
-- Health: `http://localhost:8000/api/v1/health`
-- Schema: `http://localhost:8000/api/v1/schema`
-- API Docs: `http://localhost:8000/api/v1/docs`
-
-Vite درخواست‌های `/api` را به Backend هدایت می‌کند.
-
-## Authentication
-
-The app checks `/api/v1/auth/session` before showing protected pages. An anonymous
-visitor is sent to `/login`; after signing in, the requested page is restored.
-Accounts flagged for an initial password change must update their password before
-using reservations, history, reports, or catalog management. Session cookies and
-Django CSRF protection are used on the same origin.
-
----
-
-## Secrets
-
-Docker Compose mounts each value in this directory as a separate file under
-`/run/secrets` inside the relevant container.
-
-Create the local files before starting the stack:
-
-- `django_secret_key.txt`
-- `postgres_password.txt`
-
-The real `*.txt` files are ignored by Git. The `*.example.txt` files document
-the expected format and must never contain production credentials.
-
-Docker Compose secrets protect values from being placed in container
-environment variables, but the source files are not encrypted at rest. Keep
-filesystem permissions appropriately restricted and use a production secret
-manager outside local development.
-
----
-
-## مدیریت Branding
-
-نام پیش‌فرض سامانه **فودسک (Foodesk)** و توضیح آن
-«سامانه رزرو غذای سازمانی» است.
-
-تنظیمات Branding از طریق مدل Singleton به نام `core.SiteSettings`
-در PostgreSQL نگهداری می‌شوند.
-
-تنها Super Admin فعال اجازه مشاهده و تغییر آن‌ها را در Django Unfold دارد.
-
-فیلدهای قابل تنظیم:
-
-- `site_name`: نام فارسی
-- `site_name_en`: نام انگلیسی
-- `site_description`: توضیحات
-- `logo`: لوگوی سامانه
-- `favicon`: آیکون مرورگر
-
-فرمت‌های PNG، JPEG و WebP برای تصاویر Branding پشتیبانی می‌شوند.
-برای امنیت، آپلود SVG مجاز نیست. محدودیت تصاویر ۲ MiB و
-۴ میلیون پیکسل است.
-
-API عمومی `GET /api/v1/config` تنظیمات را به React ارائه می‌دهد.
-این Endpoint نیازی به ورود ندارد و فقط خواندنی است.
-
-عنوان و تصاویر Django Unfold نیز از همین تنظیمات دریافت می‌شوند.
-تا زمان آپلود تصویر، آیکون پیش‌فرض استفاده می‌شود.
-
-نام و آیکون PWA در Manifest فعلی استاتیک هستند و تغییر تنظیمات
-Admin الزاماً نام نسخه‌های نصب‌شده PWA را به‌روزرسانی نمی‌کند.
-
-## متغیرهای محیطی
-
-فایل `.env.example` تنظیمات نمونه Development را نگهداری می‌کند.
-
-- `DJANGO_SETTINGS_MODULE`: ماژول تنظیمات Django
-- `DJANGO_DEBUG`: حالت Debug
-- `DJANGO_ALLOWED_HOSTS`: میزبان‌های مجاز
-- `DJANGO_CSRF_TRUSTED_ORIGINS`: Originهای مورد اعتماد
-- `POSTGRES_DB`: نام پایگاه داده
-- `POSTGRES_USER`: نام کاربری PostgreSQL
-- `DOCKER_COMPOSE_RESERVATION_CUTOFF_HOUR`: ساعت پایان رزرو
-
-متغیر `DOCKER_COMPOSE_RESERVATION_CUTOFF_HOUR` توسط Docker Compose
-به `RESERVATION_CUTOFF_HOUR` در کانتینر Backend منتقل می‌شود.
-
-مقدار پیش‌فرض `10` است و فقط اعداد صحیح `0` تا `23` پذیرفته می‌شوند.
-
-مهلت رزرو، ساعت تعیین‌شده در **روز قبل از تاریخ منو** و با
-منطقه زمانی `Asia/Tehran` است.
-
-برای اعمال تغییر ENV، کانتینر Backend باید با محیط جدید بازایجاد شود.
-
-## تست و کیفیت کد
-
-دستورات Backend:
+1. Create local `secrets/django_secret_key.txt` and `secrets/postgres_password.txt` from their respective `.example.txt` files, using strong secret values. Do not commit the actual files.
+2. Optionally copy `.env.example` to `.env` and review its settings.
+3. Ensure that the external Docker network `shared_net` exists (`docker network create shared_net` if necessary).
+4. Ensure `/opt/food/media` exists on the Docker host. The `food_media` volume uses this **absolute bind-mount path**, so adapt the Compose file when deploying from another host path.
+5. Start the services, then apply migrations explicitly:
 
 ```bash
+docker compose up --build -d
+docker compose exec -T backend python manage.py migrate
+```
+
+| Service | Development URL |
+|---|---|
+| Web application | `http://localhost:5173` |
+| Backend | `http://localhost:8000` |
+| Health | `http://localhost:8000/api/v1/health` |
+| OpenAPI schema | `http://localhost:8000/api/v1/schema` |
+| API documentation | `http://localhost:8000/api/v1/docs` |
+
+Vite proxies `/api` requests to Django in development. Database migrations do **not** run automatically as part of the image build.
+
+## Authentication, roles and API
+
+Authentication uses Django sessions and CSRF protection. The application checks `/api/v1/auth/session`, redirects anonymous users to `/login`, and requires applicable users to change their initial password before using protected features. The employee username is the **personnel number**.
+
+Roles and permissions are enforced server-side. Super Admin has full administrative access; `hrFood` has delegated employee-management capabilities. Other permissions, including reporting access, depend on the configured Django permissions and endpoint policies.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/v1/config` | Public, read-only site branding |
+| `GET /api/v1/auth/session` | Current session status |
+| `GET /api/v1/reservations` | User reservation history |
+| `GET /api/v1/reservations/weekly?start=YYYY-MM-DD` | Weekly reservation view |
+| `GET /api/v1/reports/daily?from=YYYY-MM-DD&to=YYYY-MM-DD` | Daily report for authorized users |
+| `GET /api/v1/reports/daily/export?from=YYYY-MM-DD&to=YYYY-MM-DD` | Daily Excel report with Jalali-formatted dates, subject to permissions |
+
+Consult the OpenAPI schema for the complete, current API contract.
+
+## Excel imports
+
+Sample workbooks are located in `backend/sample_data/`. Run commands in the **backend container**; paths below are relative to `/app`:
+
+```bash
+docker compose exec -T backend python manage.py import_employees sample_data/sample_employees.xlsx --dry-run
+docker compose exec -T backend python manage.py import_catalog sample_data/sample_catalog.xlsx --dry-run
+docker compose exec -T backend python manage.py import_monthly_menu sample_data/sample_monthly_menu.xlsx --dry-run
+```
+
+Remove `--dry-run` only after checking validation results. The documented import workflow is atomic and validates duplicates/conflicts before writing. Catalog and menu prices are **whole amounts in Toman**, using fields such as `price_toman` (do not confuse them with rial values in other source documents).
+
+The employee workbook includes personnel number, building number, department number, and active status; employee names are not imported by this workflow. Initially, imported employee passwords match the personnel number and must be changed at first login.
+
+The monthly menu workbook contains the `Foods`, `Sides`, and `Drinks` sheets. `Foods` uses `date`, `name`, `price_toman`, `container_price_toman`, and `special_container_price_toman`. Dates can be Excel dates or `YYYY-MM-DD`, and food names must already exist in the catalog. The menu price includes the food price plus the larger of the two container prices. `Sides` and `Drinks` use `name` and `price_toman`.
+
+Duplicate menu dates are rejected. Identical reimports leave existing records unchanged; conflicting food or pricing for an existing date is rejected rather than overwriting historical data. Existing catalog names with changed prices are also rejected by the documented import workflow.
+
+## Site branding
+
+Default branding: **فودسک / Foodesk**, description **سامانه رزرو غذای سازمانی**.
+
+A single `core.SiteSettings` PostgreSQL record stores `site_name`, `site_name_en`, `site_description`, `logo`, and `favicon`. Only active **Super Admin** users can manage this record through Django Unfold. The public `GET /api/v1/config` endpoint supplies branding to React, including media URLs when assets are uploaded.
+
+Brand images accept PNG, JPEG, or WebP with server-side checks (up to 2 MiB and 4 million pixels); SVG uploads are disallowed. If no image is configured, the interface displays a default icon. Django Unfold also uses database-backed title, header and image callbacks, plus a static fallback favicon.
+
+**PWA limitation:** the current web manifest stores its app name and icon statically; changing the admin branding does not necessarily rename an already-installed PWA.
+
+## Environment and secrets
+
+The `.env.example` file supplies non-secret local configuration such as `DJANGO_SETTINGS_MODULE`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `POSTGRES_DB`, and `POSTGRES_USER`.
+
+Reservation cutoff configuration:
+
+```dotenv
+DOCKER_COMPOSE_RESERVATION_CUTOFF_HOUR=10
+```
+
+Compose maps this variable to the backend's `RESERVATION_CUTOFF_HOUR`. It must be an integer from **0 through 23**. Reservations close at the configured hour on the **day before** the menu date in the `Asia/Tehran` time zone. Recreate the backend container after changing its environment.
+
+Compose mounts `secrets/django_secret_key.txt` and `secrets/postgres_password.txt` under `/run/secrets` in relevant containers. These files must be protected and excluded from Git. Docker Compose secrets do **not** encrypt their source files at rest.
+
+## Quality checks
+
+```bash
+# Backend
 docker compose exec -T backend python manage.py check
 docker compose exec -T backend python manage.py test
 docker compose exec -T backend ruff check .
 docker compose exec -T backend python manage.py makemigrations --check --dry-run
-```
 
-دستورات Frontend:
-
-```bash
+# Frontend
 docker compose exec -T frontend pnpm typecheck
 docker compose exec -T frontend pnpm lint
 docker compose exec -T frontend pnpm test:run
 ```
 
-Backend از Django Test Runner استفاده می‌کند، نه pytest.
+Backend tests use the **Django test runner**, not pytest.
 
-## ملاحظات Production
+## Storage and production considerations
 
-Docker Compose فعلی مخصوص Development است و نباید بدون
-آماده‌سازی امنیتی برای Production استفاده شود.
-
-- Backend فعلاً با Django `runserver` اجرا می‌شود.
-- Frontend با Vite Development Server اجرا می‌شود.
-- `DJANGO_DEBUG=true` مخصوص محیط توسعه است.
-- PostgreSQL روی شبکه داخلی `food_reservation_internal` است.
-- Frontend و Backend به شبکه External `shared_net` متصل هستند.
-- اطلاعات دیتابیس در Volume `postgres_data` ذخیره می‌شوند.
-- فایل‌های Media در Volume `food_media` ذخیره می‌شوند که
-  به مسیر `/opt/food/media` روی میزبان متصل است.
-- `MEDIA_URL` برابر `/media/` و `MEDIA_ROOT` برابر `/app/media` است.
-- Static و Media در Production به فایل‌رسانی مناسب نیاز دارند.
-- HTTPS، تنظیمات Cookie و CSRF، مدیریت Secrets و پشتیبان‌گیری
-  باید پیش از استقرار عملیاتی بررسی شوند.
+- PostgreSQL data persists in `postgres_data` on the internal `food_reservation_internal` network.
+- The frontend and backend attach to the external `shared_net`; PostgreSQL is not exposed through that network.
+- Uploaded media persists in `food_media`, bound to `/opt/food/media` on the host; the backend uses `MEDIA_URL=/media/` and `MEDIA_ROOT=/app/media`.
+- Django static files use `STATIC_ROOT=/app/staticfiles` in the current container layout. Production needs a proper static-file and media-serving setup; merely defining these paths does not make them publicly accessible.
+- The supplied Compose runs Vite and Django development servers with a debug-oriented configuration. **Do not deploy it unchanged to production.** Review HTTPS, `DEBUG=False`, secure cookies and CSRF settings, allowed hosts, secret management, backups, operational logging, and static/media serving before deployment.
