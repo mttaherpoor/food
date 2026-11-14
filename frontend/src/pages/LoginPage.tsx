@@ -2,6 +2,7 @@ import { ChevronLeft } from 'lucide-react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import BrandMark from '../components/layout/BrandMark'
+import { useBranding } from '../app/branding'
 import { getApiMessage } from '../utils/errors'
 
 export default function LoginScreen({
@@ -11,6 +12,7 @@ export default function LoginScreen({
   initialError: string
   onSubmit: (username: string, password: string) => Promise<void>
 }) {
+  const branding = useBranding()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -34,7 +36,7 @@ export default function LoginScreen({
     <main dir="rtl" className="block min-h-svh min-[681px]:grid min-[681px]:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)]">
       <section className="login-intro relative flex min-h-svh flex-col justify-between overflow-hidden bg-[#164c5a] p-[clamp(32px,6vw,88px)] text-white max-[680px]:min-h-0 max-[680px]:px-[22px] max-[680px]:pt-6 max-[680px]:pb-[25px]" aria-labelledby="login-title">
         <BrandMark variant="login" />
-        <p className="mt-auto mb-[14px] font-semibold text-[#b9d6dc]">پی‌آی فود · سامانه کارکنان</p>
+        <p className="mt-auto mb-[14px] font-semibold text-[#b9d6dc]">{branding.site_name} · {branding.site_description}</p>
         <h1 id="login-title" className="m-0 max-w-[580px] text-[clamp(40px,5vw,66px)] leading-[1.22] tracking-[-1.6px] max-[680px]:mt-6 max-[680px]:max-w-[420px] max-[680px]:text-[32px]">غذای این هفته‌ات را انتخاب کن.</h1>
         <p className="mt-[22px] mb-0 max-w-[480px] text-lg leading-[1.9] text-[#d0e0e3] max-[680px]:mt-3 max-[680px]:text-sm">با کد پرسنلی وارد شو و رزروهای روزانه‌ات را مدیریت کن.</p>
         <div className="relative z-[1] mt-[72px] grid grid-cols-5 gap-2 max-[680px]:hidden" aria-hidden="true">

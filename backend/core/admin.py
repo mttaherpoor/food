@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 
 from unfold.admin import ModelAdmin
 
-from core.models import Building, CustomUser, Department, Profile
+from core.models import Building, CustomUser, Department, Profile, SiteSettings
 
 
 @admin.register(CustomUser)
@@ -39,3 +39,34 @@ class DepartmentAdmin(ModelAdmin):
     list_filter = ('is_active',)
     search_fields = ('number',)
     ordering = ('number',)
+
+
+@admin.register(SiteSettings)
+class SiteSettingsAdmin(ModelAdmin):
+    fields = (
+        'site_name',
+        'site_name_en',
+        'site_description',
+        'logo',
+        'favicon',
+    )
+    list_display = ('site_name', 'site_name_en')
+
+    def has_module_permission(self, request):
+        return request.user.is_active and request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return (
+            request.user.is_active
+            and request.user.is_superuser
+            and not SiteSettings.objects.exists()
+        )
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_active and request.user.is_superuser
+
+    def has_delete_permission(self, request, obj=None):
+        return False

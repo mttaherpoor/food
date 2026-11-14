@@ -1,7 +1,18 @@
+from __future__ import annotations
+
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
 
-from core.models import Building, Department
+from typing import TYPE_CHECKING
+
+from PIL import Image, UnidentifiedImageError
+
+if TYPE_CHECKING:
+    from core.models import Building, Department
+
+MAX_BRAND_IMAGE_SIZE = 2 * 1024 * 1024
+MAX_BRAND_IMAGE_PIXELS = 4_000_000
+ALLOWED_BRAND_IMAGE_FORMATS = frozenset({'PNG', 'JPEG', 'WEBP'})
 
 
 def validate_reference_number(value: str, *, field_name: str, allow_blank: bool = False) -> str:
@@ -25,6 +36,8 @@ def validate_building_number(value: str, *, allow_blank: bool = False) -> Buildi
     if not number:
         return None
 
+    from core.models import Building
+
     building = Building.objects.filter(number=number).first()
 
     if building is None:
@@ -41,6 +54,8 @@ def validate_department_number(value: str, *, allow_blank: bool = False) -> Depa
 
     if not number:
         return None
+
+    from core.models import Department
 
     department = Department.objects.filter(number=number).first()
 
@@ -70,3 +85,30 @@ def validate_new_password(value: str, user) -> str:
         raise ValidationError({'new_password': list(exc.messages)}) from exc
 
     return value
+
+
+def validate_brand_image(uploaded_file):
+    if uploaded_file.size <= 0 or uploaded_file.size > MAX_BRAND_IMAGE_SIZE:
+        raise ValidationError('حجم تصویر باید بین 1 بایت و 2 مگابایت باشد.')
+
+    original_position = uploaded_file.tell()
+
+    try:
+        uploaded_file.seek(0)
+
+        with Image.open(uploaded_file) as image:
+            if image.format not in ALLOWED_BRAND_IMAGE_FORMATS:
+                raise ValidationError('فقط PNG، JPEG و WebP مجاز هستند.')
+
+            width, height = image.size
+
+            if width <= 0 or height <= 0 or width * height > MAX_BRAND_IMAGE_PIXELS:
+                raise ValidationError('ابعاد تصویر مجاز نیست.')
+
+            image.verify()
+
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+        raise ValidationError('فایل تصویر معتبر نیست.') from exc
+
+    finally:
+        uploaded_file.seek(original_position)

@@ -4,6 +4,13 @@ import os
 from pathlib import Path
 
 from config.env import get_csv, get_secret
+from core.branding import (
+    admin_site_favicon,
+    admin_site_header,
+    admin_site_icon,
+    admin_site_logo,
+    admin_site_title,
+)
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 REPOSITORY_DIR = BASE_DIR.parent
@@ -135,7 +142,12 @@ SPECTACULAR_SETTINGS = {
 }
 
 UNFOLD = {
-    'SITE_TITLE': 'سامانه رزرو غذا',
-    'SITE_HEADER': 'مدیریت سامانه رزرو غذا',
+    'SITE_TITLE': admin_site_title,
+    'SITE_HEADER': admin_site_header,
+    'SITE_LOGO': admin_site_logo,
+    'SITE_ICON': admin_site_icon,
     'SITE_SYMBOL': 'restaurant',
+    'SITE_FAVICONS': [
+        {'rel': 'icon', 'href': admin_site_favicon},
+    ],
 }

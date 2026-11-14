@@ -19,6 +19,7 @@ import type { Page } from '../../app/navigation'
 import { canSeeReport, isManager } from '../../app/permissions'
 import { iconButtonClass } from '../ui/buttonStyles'
 import BrandMark from './BrandMark'
+import { useBranding } from '../../app/branding'
 import {
   getCurrentTheme,
   THEME_CHANGED_EVENT,
@@ -50,6 +51,7 @@ export default function MainShell({
   onLogout: () => void
   children: ReactNode
 }) {
+  const branding = useBranding()
   const [wallet, setWallet] = useState<WalletSummary | null>(null)
   const [walletError, setWalletError] = useState(false)
   const [theme, setCurrentTheme] = useState(getCurrentTheme)
@@ -188,18 +190,18 @@ export default function MainShell({
           <button className="flex min-h-[42px] w-full cursor-pointer items-center gap-[10px] border-0 bg-transparent px-[7px] text-[13px] text-muted hover:text-negative" onClick={onLogout} type="button"><LogOut size={17} /> خروج از حساب</button>
         </div>
       </aside>
-      <header className="mobile-topbar sticky top-0 z-[5] hidden h-[58px] items-center gap-[10px] border-b border-line bg-surface/95 px-4 backdrop-blur-md max-[680px]:flex">
-        <BrandMark variant="mobile" />
-        <div className="ms-auto flex min-w-0 items-center gap-2.5">
+      <header className="mobile-topbar sticky top-0 z-[5] hidden min-h-[64px] items-center gap-2 border-b border-line bg-surface/95 px-3 py-2 backdrop-blur-md max-[680px]:flex">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <BrandMark variant="mobile" />
           <span
-            className="inline-flex min-w-0 items-center gap-1 text-[11px] text-ink"
-            aria-label="کد پرسنلی"
+            className="block min-w-0 truncate ps-1 text-[11px] text-muted"
+            aria-label={`کد پرسنلی: ${user.username}`}
+            title={user.username}
           >
-            <UserRound size={13} className="shrink-0 text-accent" aria-hidden="true" />
-            <strong className="max-w-[72px] truncate" title={user.username}>
-              {user.username}
-            </strong>
+            کد پرسنلی: <strong className="text-ink">{user.username}</strong>
           </span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           <span
             className="flex min-w-0 flex-col items-center gap-0.5 text-[10px] text-muted"
             aria-label="هزینه رزروهای ماه جاری"
@@ -220,7 +222,7 @@ export default function MainShell({
       </header>
       <main className={`min-h-svh ms-[236px] px-9 pb-12 max-[900px]:ms-[205px] max-[900px]:px-[23px] max-[680px]:ms-0 max-[680px]:min-h-0 max-[680px]:px-4 max-[680px]:pb-[93px] ${page === 'profile' ? 'min-[681px]:pb-3' : ''}`} id="main-content">
         <div className="flex h-[65px] items-center justify-between border-b border-line text-[13px] text-muted max-[680px]:hidden">
-          <div className="flex items-center gap-[7px]">پی‌آی فود <ChevronLeft aria-hidden="true" size={14} /> سامانه رزرو غذا</div>
+          <div className="flex items-center gap-[7px]">{branding.site_name} <ChevronLeft aria-hidden="true" size={14} /> {branding.site_description}</div>
           <div className="flex items-center gap-3">
             <div>کد پرسنلی <strong className="ms-[5px] text-ink">{user.username}</strong></div>
             {themeToggle}

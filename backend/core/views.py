@@ -11,7 +11,7 @@ from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 
 from typing import ClassVar
 
-from core.models import Building, CustomUser, Department
+from core.models import Building, CustomUser, Department, SiteSettings
 from core.permissions import HasChangedInitialPassword, IsHRFoodOrSuperAdmin
 from core.serializers import (
     ChangePasswordSerializer,
@@ -36,6 +36,46 @@ class HealthViewSet(viewsets.ViewSet):
     )
     def list(self, request):
         return Response({'status': 'ok'})
+
+
+class ConfigViewSet(viewsets.ViewSet):
+    """Public, read-only application branding configuration."""
+
+    authentication_classes: ClassVar[list] = []
+    permission_classes: ClassVar[list] = [AllowAny]
+    http_method_names: ClassVar[list] = ['get', 'head', 'options']
+
+    @extend_schema(
+        responses=inline_serializer(
+            name='PublicSiteConfig',
+            fields={
+                'site_name': serializers.CharField(),
+                'site_name_en': serializers.CharField(),
+                'site_description': serializers.CharField(),
+                'logo_url': serializers.URLField(allow_null=True),
+                'favicon_url': serializers.URLField(allow_null=True),
+            },
+        )
+    )
+    def list(self, request):
+        config = SiteSettings.objects.filter(pk=1).first()
+
+        if config is None:
+            return Response({
+                'site_name': 'فودسک',
+                'site_name_en': 'Foodesk',
+                'site_description': 'سامانه رزرو غذای سازمانی',
+                'logo_url': None,
+                'favicon_url': None,
+            })
+
+        return Response({
+            'site_name': config.site_name,
+            'site_name_en': config.site_name_en,
+            'site_description': config.site_description,
+            'logo_url': config.logo.url if config.logo else None,
+            'favicon_url': config.favicon.url if config.favicon else None,
+        })
 
 
 class AuthViewSet(viewsets.GenericViewSet):
