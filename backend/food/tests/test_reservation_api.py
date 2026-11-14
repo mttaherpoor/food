@@ -48,12 +48,14 @@ class ReservationAPITests(TestCase):
         created = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                    'side': side.pk,
-                    'drink': drink.pk,
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                        'side': side.pk,
+                        'drink': drink.pk,
+                    }
+                ],
             },
             content_type='application/json',
         )
@@ -143,19 +145,21 @@ class ReservationAPITests(TestCase):
         response = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                    'food_quantity': 1,
-                    'sides': [
-                        {'side': salad.pk, 'quantity': 2},
-                        {'side': yogurt.pk, 'quantity': 1},
-                    ],
-                    'drinks': [
-                        {'drink': doogh.pk, 'quantity': 3},
-                        {'drink': cola.pk, 'quantity': 2},
-                    ],
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                        'food_quantity': 1,
+                        'sides': [
+                            {'side': salad.pk, 'quantity': 2},
+                            {'side': yogurt.pk, 'quantity': 1},
+                        ],
+                        'drinks': [
+                            {'drink': doogh.pk, 'quantity': 3},
+                            {'drink': cola.pk, 'quantity': 2},
+                        ],
+                    }
+                ],
             },
             content_type='application/json',
         )
@@ -168,23 +172,23 @@ class ReservationAPITests(TestCase):
         )
         item = reservation.current_item
 
-        sides = {
-            row.side_id: (row.quantity, row.unit_price)
-            for row in item.side_items.all()
-        }
-        drinks = {
-            row.drink_id: (row.quantity, row.unit_price)
-            for row in item.drink_items.all()
-        }
+        sides = {row.side_id: (row.quantity, row.unit_price) for row in item.side_items.all()}
+        drinks = {row.drink_id: (row.quantity, row.unit_price) for row in item.drink_items.all()}
 
-        self.assertEqual(sides, {
-            salad.pk: (2, 200_000),
-            yogurt.pk: (1, 100_000),
-        })
-        self.assertEqual(drinks, {
-            doogh.pk: (3, 150_000),
-            cola.pk: (2, 120_000),
-        })
+        self.assertEqual(
+            sides,
+            {
+                salad.pk: (2, 200_000),
+                yogurt.pk: (1, 100_000),
+            },
+        )
+        self.assertEqual(
+            drinks,
+            {
+                doogh.pk: (3, 150_000),
+                cola.pk: (2, 120_000),
+            },
+        )
 
         self.assertEqual(item.total_price, 2_290_000)
         self.assertEqual(reservation.total_price, 2_290_000)
@@ -202,17 +206,19 @@ class ReservationAPITests(TestCase):
         created = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                    'sides': [
-                        {'side': salad.pk, 'quantity': 2},
-                        {'side': yogurt.pk, 'quantity': 1},
-                    ],
-                    'drinks': [
-                        {'drink': doogh.pk, 'quantity': 1},
-                    ],
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                        'sides': [
+                            {'side': salad.pk, 'quantity': 2},
+                            {'side': yogurt.pk, 'quantity': 1},
+                        ],
+                        'drinks': [
+                            {'drink': doogh.pk, 'quantity': 1},
+                        ],
+                    }
+                ],
             },
             content_type='application/json',
         )
@@ -267,12 +273,14 @@ class ReservationAPITests(TestCase):
         created = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                    'sides': [{'side': salad.pk, 'quantity': 2}],
-                    'drinks': [{'drink': doogh.pk, 'quantity': 2}],
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                        'sides': [{'side': salad.pk, 'quantity': 2}],
+                        'drinks': [{'drink': doogh.pk, 'quantity': 2}],
+                    }
+                ],
             },
             content_type='application/json',
         )
@@ -365,11 +373,13 @@ class ReservationAPITests(TestCase):
         created = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                    'side': side.pk,
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                        'side': side.pk,
+                    }
+                ],
             },
             content_type='application/json',
         )
@@ -406,11 +416,13 @@ class ReservationAPITests(TestCase):
         created = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                    'drink': drink.pk,
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                        'drink': drink.pk,
+                    }
+                ],
             },
             content_type='application/json',
         )
@@ -442,14 +454,16 @@ class ReservationAPITests(TestCase):
         created = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                    'sides': [
-                        {'side': salad.pk, 'quantity': 2},
-                        {'side': yogurt.pk, 'quantity': 1},
-                    ],
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                        'sides': [
+                            {'side': salad.pk, 'quantity': 2},
+                            {'side': yogurt.pk, 'quantity': 1},
+                        ],
+                    }
+                ],
             },
             content_type='application/json',
         )
@@ -499,11 +513,13 @@ class ReservationAPITests(TestCase):
                 response = self.client.post(
                     reverse('reservation-list'),
                     {
-                        'reservations': [{
-                            'menu': self.menu.pk,
-                            'building': self.building.pk,
-                            **payload,
-                        }],
+                        'reservations': [
+                            {
+                                'menu': self.menu.pk,
+                                'building': self.building.pk,
+                                **payload,
+                            }
+                        ],
                     },
                     content_type='application/json',
                 )
@@ -712,7 +728,7 @@ class ReservationAPITests(TestCase):
             1,
             10,
             0,
-            tzinfo= timezone.get_default_timezone(),
+            tzinfo=timezone.get_default_timezone(),
         )
 
         with patch('food.services._local_now', return_value=cutoff):
@@ -733,7 +749,6 @@ class ReservationAPITests(TestCase):
         self.assertIn('menu', response.json())
         self.assertEqual(Reservation.objects.count(), 0)
 
-
     def test_configurable_cutoff_matches_weekly_menu_and_service(self):
         from rest_framework.exceptions import ValidationError
 
@@ -752,7 +767,11 @@ class ReservationAPITests(TestCase):
         for cutoff_hour, hour, minute, expected in cases:
             with self.subTest(cutoff_hour=cutoff_hour, hour=hour, minute=minute):
                 current = datetime(
-                    2099, 1, 1, hour, minute,
+                    2099,
+                    1,
+                    1,
+                    hour,
+                    minute,
                     tzinfo=timezone.get_default_timezone(),
                 )
 
@@ -774,7 +793,11 @@ class ReservationAPITests(TestCase):
     @override_settings(RESERVATION_CUTOFF_HOUR=9)
     def test_configured_nine_am_cutoff_rejects_reservation(self):
         current = datetime(
-            2099, 1, 1, 9, 0,
+            2099,
+            1,
+            1,
+            9,
+            0,
             tzinfo=timezone.get_default_timezone(),
         )
 
@@ -782,10 +805,12 @@ class ReservationAPITests(TestCase):
             response = self.client.post(
                 reverse('reservation-list'),
                 {
-                    'reservations': [{
-                        'menu': self.menu.pk,
-                        'building': self.building.pk,
-                    }],
+                    'reservations': [
+                        {
+                            'menu': self.menu.pk,
+                            'building': self.building.pk,
+                        }
+                    ],
                 },
                 content_type='application/json',
             )
@@ -797,7 +822,11 @@ class ReservationAPITests(TestCase):
     @override_settings(RESERVATION_CUTOFF_HOUR=11)
     def test_configured_eleven_am_cutoff_allows_reservation_before_deadline(self):
         current = datetime(
-            2099, 1, 1, 10, 59,
+            2099,
+            1,
+            1,
+            10,
+            59,
             tzinfo=timezone.get_default_timezone(),
         )
 
@@ -805,10 +834,12 @@ class ReservationAPITests(TestCase):
             response = self.client.post(
                 reverse('reservation-list'),
                 {
-                    'reservations': [{
-                        'menu': self.menu.pk,
-                        'building': self.building.pk,
-                    }],
+                    'reservations': [
+                        {
+                            'menu': self.menu.pk,
+                            'building': self.building.pk,
+                        }
+                    ],
                 },
                 content_type='application/json',
             )
@@ -832,20 +863,19 @@ class ReservationAPITests(TestCase):
 
         self.assertEqual(response.status_code, 200, response.content)
 
-        menu_data = next(
-            item for item in response.json()
-            if item['id'] == self.menu.pk
-        )
+        menu_data = next(item for item in response.json() if item['id'] == self.menu.pk)
 
         self.assertEqual(menu_data['food_price'], 2_100_000)
 
         created = self.client.post(
             reverse('reservation-list'),
             {
-                'reservations': [{
-                    'menu': self.menu.pk,
-                    'building': self.building.pk,
-                }],
+                'reservations': [
+                    {
+                        'menu': self.menu.pk,
+                        'building': self.building.pk,
+                    }
+                ],
             },
             content_type='application/json',
         )

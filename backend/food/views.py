@@ -119,16 +119,10 @@ class ReservationViewSet(viewsets.ModelViewSet):
     def history_export(self, request):
         from core.models import Profile
 
-        person_id = (
-            Profile.objects.filter(user=request.user)
-            .values_list('personnel_number', flat=True)
-            .first()
-        )
+        person_id = Profile.objects.filter(user=request.user).values_list('personnel_number', flat=True).first()
 
         if not person_id:
-            raise ValidationError({
-                'personnel_number': 'کد پرسنلی کاربر ثبت نشده است.'
-            })
+            raise ValidationError({'personnel_number': 'کد پرسنلی کاربر ثبت نشده است.'})
 
         return export_full_history(
             self.get_queryset(),
@@ -225,20 +219,21 @@ class DailyReportViewSet(viewsets.ViewSet):
                     food_quantity += item.food_quantity
                     total_toman += item.total_price
 
-            data.append({
-                'date': menu.date,
-                'food': menu.food.name,
-                'reserved_count': reserved_count,
-                'cancelled_count': cancelled_count,
-                'food_quantity': food_quantity,
-                'total_toman': total_toman,
-            })
+            data.append(
+                {
+                    'date': menu.date,
+                    'food': menu.food.name,
+                    'reserved_count': reserved_count,
+                    'cancelled_count': cancelled_count,
+                    'food_quantity': food_quantity,
+                    'total_toman': total_toman,
+                }
+            )
 
         return data
 
     def list(self, request):
         return Response(self._report_data(request))
-
 
     @action(detail=False, methods=['get'], url_path='buildings')
     def buildings(self, request):
@@ -247,34 +242,24 @@ class DailyReportViewSet(viewsets.ViewSet):
         end_date = parse_date(request.query_params.get('to', ''))
 
         if start_date is None or end_date is None:
-            raise ValidationError({
-                'date_range': 'پارامترهای from و to با قالب YYYY-MM-DD الزامی‌اند.'
-            })
+            raise ValidationError({'date_range': 'پارامترهای from و to با قالب YYYY-MM-DD الزامی‌اند.'})
         if end_date < start_date:
-            raise ValidationError({
-                'to': 'تاریخ پایان نباید قبل از تاریخ شروع باشد.'
-            })
+            raise ValidationError({'to': 'تاریخ پایان نباید قبل از تاریخ شروع باشد.'})
 
-        items = (
-            ReservationItem.objects.filter(
-                reservation__menu__date__range=(start_date, end_date),
-                reservation__status=Reservation.Status.RESERVED,
-                is_current=True,
-                is_cancelled=False,
-            )
-            .select_related(
-                'building',
-                'reservation__menu__food',
-            )
+        items = ReservationItem.objects.filter(
+            reservation__menu__date__range=(start_date, end_date),
+            reservation__status=Reservation.Status.RESERVED,
+            is_current=True,
+            is_cancelled=False,
+        ).select_related(
+            'building',
+            'reservation__menu__food',
         )
 
         grouped = {}
 
         for item in items:
-            number = (
-                item.building_number_snapshot
-                or (item.building.number if item.building_id else '')
-            )
+            number = item.building_number_snapshot or (item.building.number if item.building_id else '')
 
             if not number:
                 continue
@@ -282,19 +267,25 @@ class DailyReportViewSet(viewsets.ViewSet):
             number = str(number)
             menu = item.reservation.menu
 
-            building = grouped.setdefault(number, {
-                'building_number': number,
-                'reserved_count': 0,
-                'days': {},
-            })
+            building = grouped.setdefault(
+                number,
+                {
+                    'building_number': number,
+                    'reserved_count': 0,
+                    'days': {},
+                },
+            )
 
             day_key = (menu.date, menu.food.name)
-            day = building['days'].setdefault(day_key, {
-                'date': menu.date.isoformat(),
-                'food': menu.food.name,
-                'reserved_count': 0,
-                'food_quantity': 0,
-            })
+            day = building['days'].setdefault(
+                day_key,
+                {
+                    'date': menu.date.isoformat(),
+                    'food': menu.food.name,
+                    'reserved_count': 0,
+                    'food_quantity': 0,
+                },
+            )
 
             building['reserved_count'] += 1
             day['reserved_count'] += 1
@@ -307,14 +298,13 @@ class DailyReportViewSet(viewsets.ViewSet):
 
         for number in sorted(grouped, key=number_sort):
             building = grouped[number]
-            result.append({
-                'building_number': number,
-                'reserved_count': building['reserved_count'],
-                'days': [
-                    building['days'][key]
-                    for key in sorted(building['days'])
-                ],
-            })
+            result.append(
+                {
+                    'building_number': number,
+                    'reserved_count': building['reserved_count'],
+                    'days': [building['days'][key] for key in sorted(building['days'])],
+                }
+            )
 
         return Response({'buildings': result})
 
@@ -325,13 +315,9 @@ class DailyReportViewSet(viewsets.ViewSet):
         end_date = parse_date(request.query_params.get('to', ''))
 
         if start_date is None or end_date is None:
-            raise ValidationError({
-                'date_range': 'پارامترهای from و to با قالب YYYY-MM-DD الزامی‌اند.'
-            })
+            raise ValidationError({'date_range': 'پارامترهای from و to با قالب YYYY-MM-DD الزامی‌اند.'})
         if end_date < start_date:
-            raise ValidationError({
-                'to': 'تاریخ پایان نباید قبل از تاریخ شروع باشد.'
-            })
+            raise ValidationError({'to': 'تاریخ پایان نباید قبل از تاریخ شروع باشد.'})
 
         current_items = (
             ReservationItem.objects.filter(
@@ -369,38 +355,29 @@ class DailyReportViewSet(viewsets.ViewSet):
 
         for reservation in reservations:
             profile = getattr(reservation.user, 'profile', None)
-            personnel = (
-                profile.personnel_number
-                if profile is not None
-                else reservation.user.username
-            )
-            department = (
-                profile.department.number
-                if profile is not None and profile.department_id
-                else ''
-            )
+            personnel = profile.personnel_number if profile is not None else reservation.user.username
+            department = profile.department.number if profile is not None and profile.department_id else ''
 
             for item in reservation.export_current_items:
-                building = (
-                    item.building_number_snapshot
-                    or (item.building.number if item.building_id else '')
-                )
+                building = item.building_number_snapshot or (item.building.number if item.building_id else '')
 
                 drinks = sorted(item.drink_items.all(), key=lambda x: x.pk)
                 sides = sorted(item.side_items.all(), key=lambda x: x.pk)
 
-                records.append({
-                    'date': reservation.menu.date,
-                    'building': str(building),
-                    'personnel': str(personnel),
-                    'department': str(department),
-                    'food': reservation.menu.food.name,
-                    'quantity': item.food_quantity,
-                    'food_unit_price': item.food_price,
-                    'drinks': drinks,
-                    'sides': sides,
-                    'total': item.total_price,
-                })
+                records.append(
+                    {
+                        'date': reservation.menu.date,
+                        'building': str(building),
+                        'personnel': str(personnel),
+                        'department': str(department),
+                        'food': reservation.menu.food.name,
+                        'quantity': item.food_quantity,
+                        'food_unit_price': item.food_price,
+                        'drinks': drinks,
+                        'sides': sides,
+                        'total': item.total_price,
+                    }
+                )
 
         records.sort(
             key=lambda row: (
@@ -430,18 +407,22 @@ class DailyReportViewSet(viewsets.ViewSet):
         ]
 
         for index in range(1, max_drinks + 1):
-            headers.extend([
-                f'نوشیدنی {index}',
-                f'تعداد نوشیدنی {index}',
-                f'قیمت واحد نوشیدنی {index} (تومان)',
-            ])
+            headers.extend(
+                [
+                    f'نوشیدنی {index}',
+                    f'تعداد نوشیدنی {index}',
+                    f'قیمت واحد نوشیدنی {index} (تومان)',
+                ]
+            )
 
         for index in range(1, max_sides + 1):
-            headers.extend([
-                f'پیش‌غذا {index}',
-                f'تعداد پیش‌غذا {index}',
-                f'قیمت واحد پیش‌غذا {index} (تومان)',
-            ])
+            headers.extend(
+                [
+                    f'پیش‌غذا {index}',
+                    f'تعداد پیش‌غذا {index}',
+                    f'قیمت واحد پیش‌غذا {index} (تومان)',
+                ]
+            )
 
         headers.append('قیمت کل (تومان)')
 
@@ -466,22 +447,26 @@ class DailyReportViewSet(viewsets.ViewSet):
             for index in range(max_drinks):
                 if index < len(record['drinks']):
                     item = record['drinks'][index]
-                    values.extend([
-                        item.drink.name,
-                        item.quantity,
-                        item.unit_price,
-                    ])
+                    values.extend(
+                        [
+                            item.drink.name,
+                            item.quantity,
+                            item.unit_price,
+                        ]
+                    )
                 else:
                     values.extend([None, None, None])
 
             for index in range(max_sides):
                 if index < len(record['sides']):
                     item = record['sides'][index]
-                    values.extend([
-                        item.side.name,
-                        item.quantity,
-                        item.unit_price,
-                    ])
+                    values.extend(
+                        [
+                            item.side.name,
+                            item.quantity,
+                            item.unit_price,
+                        ]
+                    )
                 else:
                     values.extend([None, None, None])
 
@@ -534,12 +519,7 @@ class DailyReportViewSet(viewsets.ViewSet):
 
         response = HttpResponse(
             output.getvalue(),
-            content_type=(
-                'application/vnd.openxmlformats-officedocument.'
-                'spreadsheetml.sheet'
-            ),
+            content_type=('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
         )
-        response['Content-Disposition'] = (
-            'attachment; filename="food-daily-report.xlsx"'
-        )
+        response['Content-Disposition'] = 'attachment; filename="food-daily-report.xlsx"'
         return response

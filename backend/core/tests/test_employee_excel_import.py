@@ -29,7 +29,6 @@ def _save_employee_workbook(path, rows):
 
 
 class EmployeeExcelImportTests(TestCase):
-
     @classmethod
     def setUpTestData(cls):
         for number in ('01', '02'):

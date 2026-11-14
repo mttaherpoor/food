@@ -20,4 +20,4 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += rp(r'^static/(?P<path>.*)$', staticfiles_serve, name='development-static'),
+    urlpatterns += (rp(r'^static/(?P<path>.*)$', staticfiles_serve, name='development-static'),)

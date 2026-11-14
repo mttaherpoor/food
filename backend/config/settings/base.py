@@ -32,11 +32,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     # 3rd party apps
     'rest_framework',
     'drf_spectacular',
-
     # local apps
     'core',
     'food',
@@ -103,19 +101,17 @@ _cutoff_raw = os.getenv('RESERVATION_CUTOFF_HOUR', '10')
 try:
     RESERVATION_CUTOFF_HOUR = int(_cutoff_raw)
 except (TypeError, ValueError) as exc:
-    raise ImproperlyConfigured(
-        'RESERVATION_CUTOFF_HOUR must be an integer between 0 and 23.'
-    ) from exc
+    raise ImproperlyConfigured('RESERVATION_CUTOFF_HOUR must be an integer between 0 and 23.') from exc
 
 if not 0 <= RESERVATION_CUTOFF_HOUR <= 23:
-    raise ImproperlyConfigured(
-        'RESERVATION_CUTOFF_HOUR must be between 0 and 23.'
-    )
+    raise ImproperlyConfigured('RESERVATION_CUTOFF_HOUR must be between 0 and 23.')
 USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [ BASE_DIR / "static",]
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'

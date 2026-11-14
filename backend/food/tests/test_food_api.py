@@ -19,7 +19,6 @@ def create_hr_food_user() -> CustomUser:
 
 
 class FoodAPITests(TestCase):
-
     def test_hr_food_can_create_food_but_cannot_supply_total_price(self):
         self.client.force_login(create_hr_food_user())
 

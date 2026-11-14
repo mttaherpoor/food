@@ -12,16 +12,16 @@ from food.models import Drink, Food, Side
 from food.serializers import DrinkSerializer, FoodSerializer, SideSerializer
 
 
-def make_image(filename="test.png", image_format="PNG"):
+def make_image(filename='test.png', image_format='PNG'):
     buffer = BytesIO()
-    Image.new("RGB", (64, 64), "#397D8D").save(
+    Image.new('RGB', (64, 64), '#397D8D').save(
         buffer,
         format=image_format,
     )
     return SimpleUploadedFile(
         filename,
         buffer.getvalue(),
-        content_type="image/png" if image_format == "PNG" else "image/jpeg",
+        content_type='image/png' if image_format == 'PNG' else 'image/jpeg',
     )
 
 
@@ -41,17 +41,17 @@ class CatalogImageTests(TestCase):
             (
                 FoodSerializer,
                 Food,
-                {"name": "Test Food", "price": 100_000, "container_price": 10_000},
+                {'name': 'Test Food', 'price': 100_000, 'container_price': 10_000},
             ),
             (
                 SideSerializer,
                 Side,
-                {"name": "Test Side", "price": 20_000},
+                {'name': 'Test Side', 'price': 20_000},
             ),
             (
                 DrinkSerializer,
                 Drink,
-                {"name": "Test Drink", "price": 15_000},
+                {'name': 'Test Drink', 'price': 15_000},
             ),
         )
 
@@ -60,44 +60,44 @@ class CatalogImageTests(TestCase):
                 serializer = serializer_class(
                     data={
                         **fields,
-                        "image": make_image(),
+                        'image': make_image(),
                     }
                 )
 
                 self.assertTrue(serializer.is_valid(), serializer.errors)
                 instance = serializer.save()
 
-                self.assertTrue(instance.image.name.endswith(".webp"))
+                self.assertTrue(instance.image.name.endswith('.webp'))
 
-                with instance.image.open("rb") as file, Image.open(file) as image:
-                    self.assertEqual(image.format, "WEBP")
+                with instance.image.open('rb') as file, Image.open(file) as image:
+                    self.assertEqual(image.format, 'WEBP')
 
     def test_invalid_image_is_rejected(self):
         image = SimpleUploadedFile(
-            "fake.png",
-            b"this is not a real image",
-            content_type="image/png",
+            'fake.png',
+            b'this is not a real image',
+            content_type='image/png',
         )
 
         serializer = SideSerializer(
             data={
-                "name": "Invalid Image",
-                "price": 20_000,
-                "image": image,
+                'name': 'Invalid Image',
+                'price': 20_000,
+                'image': image,
             }
         )
 
         self.assertFalse(serializer.is_valid())
-        self.assertIn("image", serializer.errors)
-        self.assertFalse(Side.objects.filter(name="Invalid Image").exists())
+        self.assertIn('image', serializer.errors)
+        self.assertFalse(Side.objects.filter(name='Invalid Image').exists())
 
     def test_updating_price_preserves_existing_image(self):
         serializer = FoodSerializer(
             data={
-                "name": "Original Food",
-                "price": 100_000,
-                "container_price": 10_000,
-                "image": make_image(),
+                'name': 'Original Food',
+                'price': 100_000,
+                'container_price': 10_000,
+                'image': make_image(),
             }
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -105,7 +105,7 @@ class CatalogImageTests(TestCase):
 
         original_image = food.image.name
 
-        updated = FoodSerializer(food, data={"price": 200_000}, partial=True)
+        updated = FoodSerializer(food, data={'price': 200_000}, partial=True)
 
         self.assertTrue(updated.is_valid(), updated.errors)
         updated.save()
@@ -120,31 +120,31 @@ class CatalogImageTests(TestCase):
             (
                 FoodAdminForm,
                 Food,
-                {"name": "Admin Food", "price": 100_000, "container_price": 10_000},
+                {'name': 'Admin Food', 'price': 100_000, 'container_price': 10_000},
             ),
             (
                 SideAdminForm,
                 Side,
-                {"name": "Admin Side", "price": 20_000},
+                {'name': 'Admin Side', 'price': 20_000},
             ),
             (
                 DrinkAdminForm,
                 Drink,
-                {"name": "Admin Drink", "price": 15_000},
+                {'name': 'Admin Drink', 'price': 15_000},
             ),
         )
 
         for form_class, model, fields in cases:
             with self.subTest(model=model.__name__):
-                form = form_class(data=fields,files={"image": make_image()})
+                form = form_class(data=fields, files={'image': make_image()})
 
                 self.assertTrue(form.is_valid(), form.errors)
                 instance = form.save()
 
-                self.assertTrue(instance.image.name.endswith(".webp"))
+                self.assertTrue(instance.image.name.endswith('.webp'))
 
-                with instance.image.open("rb") as file, Image.open(file) as image:
-                    self.assertEqual(image.format, "WEBP")
+                with instance.image.open('rb') as file, Image.open(file) as image:
+                    self.assertEqual(image.format, 'WEBP')
 
                 self.assertIs(admin.site._registry[model].form, form_class)
 
@@ -156,41 +156,41 @@ class CatalogImageTests(TestCase):
 
         user_model = get_user_model()
         user = user_model.objects.create_superuser(
-            username="catalog-image-admin",
-            password="TestPassword_123!",
+            username='catalog-image-admin',
+            password='TestPassword_123!',
         )
 
-        if hasattr(user, "must_change_password"):
+        if hasattr(user, 'must_change_password'):
             user.must_change_password = False
-            user.save(update_fields=["must_change_password"])
+            user.save(update_fields=['must_change_password'])
 
         client = APIClient()
         client.force_authenticate(user=user)
 
         cases = (
             (
-                "food-list",
+                'food-list',
                 Food,
                 {
-                    "name": "HTTP Food",
-                    "price": 100_000,
-                    "container_price": 10_000,
+                    'name': 'HTTP Food',
+                    'price': 100_000,
+                    'container_price': 10_000,
                 },
             ),
             (
-                "side-list",
+                'side-list',
                 Side,
                 {
-                    "name": "HTTP Side",
-                    "price": 20_000,
+                    'name': 'HTTP Side',
+                    'price': 20_000,
                 },
             ),
             (
-                "drink-list",
+                'drink-list',
                 Drink,
                 {
-                    "name": "HTTP Drink",
-                    "price": 15_000,
+                    'name': 'HTTP Drink',
+                    'price': 15_000,
                 },
             ),
         )
@@ -201,21 +201,21 @@ class CatalogImageTests(TestCase):
                     reverse(route),
                     {
                         **fields,
-                        "image": make_image(),
+                        'image': make_image(),
                     },
-                    format="multipart",
+                    format='multipart',
                 )
 
-                self.assertEqual(response.status_code,201,response.content)
+                self.assertEqual(response.status_code, 201, response.content)
 
-                instance = model.objects.get(pk=response.data["id"])
+                instance = model.objects.get(pk=response.data['id'])
 
-                self.assertTrue(instance.image.name.endswith(".webp"))
+                self.assertTrue(instance.image.name.endswith('.webp'))
 
                 self.assertTrue(instance.image.storage.exists(instance.image.name))
 
-                self.assertIn("image_data", response.data)
-                self.assertIn(instance.image.name,response.data["image_data"]["url"])
+                self.assertIn('image_data', response.data)
+                self.assertIn(instance.image.name, response.data['image_data']['url'])
 
-                with (instance.image.open("rb") as file, Image.open(file) as image):
-                    self.assertEqual(image.format, "WEBP")
+                with instance.image.open('rb') as file, Image.open(file) as image:
+                    self.assertEqual(image.format, 'WEBP')

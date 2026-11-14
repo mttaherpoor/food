@@ -23,25 +23,22 @@ def current_month_wallet(queryset):
         end = jdatetime.date(year, month + 1, 1).togregorian()
 
     current_items = Prefetch(
-        "items",
+        'items',
         queryset=ReservationItem.objects.filter(
             is_current=True,
             is_cancelled=False,
         ).prefetch_related(
-            "side_items",
-            "drink_items",
+            'side_items',
+            'drink_items',
         ),
-        to_attr="wallet_current_items",
+        to_attr='wallet_current_items',
     )
 
-    reservations = (
-        queryset.filter(
-            menu__date__gte=start,
-            menu__date__lt=end,
-            status=Reservation.Status.RESERVED,
-        )
-        .prefetch_related(current_items)
-    )
+    reservations = queryset.filter(
+        menu__date__gte=start,
+        menu__date__lt=end,
+        status=Reservation.Status.RESERVED,
+    ).prefetch_related(current_items)
 
     amount = 0
     count = 0
@@ -55,7 +52,7 @@ def current_month_wallet(queryset):
         count += 1
 
     return {
-        "month": f"{year:04d}-{month:02d}",
-        "spent_toman": amount,
-        "reservation_count": count,
+        'month': f'{year:04d}-{month:02d}',
+        'spent_toman': amount,
+        'reservation_count': count,
     }

@@ -1,13 +1,10 @@
 """Dynamic admin branding backed by SiteSettings."""
 
+
 def _site_name() -> str:
     from core.models import SiteSettings
 
-    name = (
-        SiteSettings.objects.filter(pk=1)
-        .values_list('site_name', flat=True)
-        .first()
-    )
+    name = SiteSettings.objects.filter(pk=1).values_list('site_name', flat=True).first()
     return name or 'فودسک'
 
 
@@ -31,7 +28,6 @@ def admin_site_icon(request) -> str | None:
 
     config = SiteSettings.objects.filter(pk=1).first()
     return config.favicon.url if config and config.favicon else None
-
 
 
 def admin_site_favicon(request) -> str:

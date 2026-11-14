@@ -7,7 +7,6 @@ from food.models import Drink, Food, Menu, MenuStatus, Side
 
 
 class FoodModelTests(TestCase):
-
     def test_food_total_price_is_calculated_by_database(self):
         food = Food.objects.create(name='Ghormeh sabzi', price=1_000_000, container_price=100_000)
 

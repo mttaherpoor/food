@@ -5,7 +5,13 @@ from PIL import Image, UnidentifiedImageError
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MiB
 MAX_IMAGE_PIXELS = 20_000_000
 
-ALLOWED_IMAGE_FORMATS = frozenset({'JPEG', 'PNG', 'WEBP',})
+ALLOWED_IMAGE_FORMATS = frozenset(
+    {
+        'JPEG',
+        'PNG',
+        'WEBP',
+    }
+)
 
 
 def validate_image_size(uploaded_file) -> None:
@@ -54,7 +60,12 @@ def validate_catalog_image(uploaded_file) -> None:
             validate_image_dimensions(image)
             image.load()
 
-    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError,) as exc:
+    except (
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+        Image.DecompressionBombError,
+    ) as exc:
         raise ValidationError('فایل انتخاب‌شده تصویر معتبر و قابل پردازشی نیست.') from exc
 
     finally:

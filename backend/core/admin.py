@@ -64,11 +64,7 @@ class SiteSettingsAdmin(ModelAdmin):
         return request.user.is_active and request.user.is_superuser
 
     def has_add_permission(self, request):
-        return (
-            request.user.is_active
-            and request.user.is_superuser
-            and not SiteSettings.objects.exists()
-        )
+        return request.user.is_active and request.user.is_superuser and not SiteSettings.objects.exists()
 
     def has_change_permission(self, request, obj=None):
         return request.user.is_active and request.user.is_superuser

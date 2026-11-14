@@ -32,24 +32,24 @@ class WalletTests(TestCase):
     def setUpTestData(cls):
         user_model = get_user_model()
         cls.user = user_model.objects.create_user(
-            username="wallet-owner",
-            password="test-password",
+            username='wallet-owner',
+            password='test-password',
         )
         cls.other_user = user_model.objects.create_user(
-            username="wallet-other",
-            password="test-password",
+            username='wallet-other',
+            password='test-password',
         )
         cls.food = Food.objects.create(
-            name="Wallet test food",
+            name='Wallet test food',
             price=100000,
             container_price=10000,
         )
         cls.side = Side.objects.create(
-            name="Wallet test side",
+            name='Wallet test side',
             price=15000,
         )
         cls.drink = Drink.objects.create(
-            name="Wallet test drink",
+            name='Wallet test drink',
             price=8000,
         )
 
@@ -92,7 +92,7 @@ class WalletTests(TestCase):
             user=user or self.user,
         )
         with patch(
-            "food.wallet.timezone.localdate",
+            'food.wallet.timezone.localdate',
             return_value=today,
         ):
             return current_month_wallet(queryset)
@@ -104,13 +104,13 @@ class WalletTests(TestCase):
         aban = self.summary(1405, 8)
         azar = self.summary(1405, 9)
 
-        self.assertEqual(aban["month"], "1405-08")
-        self.assertEqual(aban["spent_toman"], 100000)
-        self.assertEqual(aban["reservation_count"], 1)
+        self.assertEqual(aban['month'], '1405-08')
+        self.assertEqual(aban['spent_toman'], 100000)
+        self.assertEqual(aban['reservation_count'], 1)
 
-        self.assertEqual(azar["month"], "1405-09")
-        self.assertEqual(azar["spent_toman"], 250000)
-        self.assertEqual(azar["reservation_count"], 1)
+        self.assertEqual(azar['month'], '1405-09')
+        self.assertEqual(azar['spent_toman'], 250000)
+        self.assertEqual(azar['reservation_count'], 1)
 
     def test_cancelled_reservation_is_not_counted(self):
         self.make_reservation(
@@ -122,8 +122,8 @@ class WalletTests(TestCase):
 
         result = self.summary(1405, 8)
 
-        self.assertEqual(result["spent_toman"], 120000)
-        self.assertEqual(result["reservation_count"], 1)
+        self.assertEqual(result['spent_toman'], 120000)
+        self.assertEqual(result['reservation_count'], 1)
 
     def test_only_current_snapshot_is_counted(self):
         reservation, old_item = self.make_reservation(
@@ -131,7 +131,7 @@ class WalletTests(TestCase):
             price=100000,
         )
         old_item.is_current = False
-        old_item.save(update_fields=["is_current"])
+        old_item.save(update_fields=['is_current'])
 
         ReservationItem.objects.create(
             reservation=reservation,
@@ -142,8 +142,8 @@ class WalletTests(TestCase):
 
         result = self.summary(1405, 8)
 
-        self.assertEqual(result["spent_toman"], 360000)
-        self.assertEqual(result["reservation_count"], 1)
+        self.assertEqual(result['spent_toman'], 360000)
+        self.assertEqual(result['reservation_count'], 1)
 
     def test_sides_and_drinks_are_included_with_snapshots(self):
         _, item = self.make_reservation(
@@ -168,8 +168,8 @@ class WalletTests(TestCase):
         # Food 200000 + sides 30000 + drinks 24000
         result = self.summary(1405, 8)
 
-        self.assertEqual(result["spent_toman"], 254000)
-        self.assertEqual(result["reservation_count"], 1)
+        self.assertEqual(result['spent_toman'], 254000)
+        self.assertEqual(result['reservation_count'], 1)
 
     def test_esfand_to_farvardin_resets_monthly_total(self):
         self.make_reservation(
@@ -188,11 +188,11 @@ class WalletTests(TestCase):
         esfand = self.summary(1405, 12)
         farvardin = self.summary(1406, 1)
 
-        self.assertEqual(esfand["month"], "1405-12")
-        self.assertEqual(esfand["spent_toman"], 90000)
+        self.assertEqual(esfand['month'], '1405-12')
+        self.assertEqual(esfand['spent_toman'], 90000)
 
-        self.assertEqual(farvardin["month"], "1406-01")
-        self.assertEqual(farvardin["spent_toman"], 140000)
+        self.assertEqual(farvardin['month'], '1406-01')
+        self.assertEqual(farvardin['spent_toman'], 140000)
 
     def test_api_is_user_scoped_and_denies_anonymous_access(self):
         self.make_reservation(
@@ -207,17 +207,17 @@ class WalletTests(TestCase):
             price=900000,
         )
 
-        url = reverse("reservation-wallet-summary")
+        url = reverse('reservation-wallet-summary')
 
         with patch(
-            "food.wallet.timezone.localdate",
+            'food.wallet.timezone.localdate',
             return_value=gregorian(1405, 8, 1),
         ):
             response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["spent_toman"], 110000)
-        self.assertEqual(response.data["reservation_count"], 1)
+        self.assertEqual(response.data['spent_toman'], 110000)
+        self.assertEqual(response.data['reservation_count'], 1)
 
         self.client.force_authenticate(user=None)
 

@@ -12,7 +12,6 @@ from core.roles import (
 
 
 class RolesTests(TestCase):
-
     def test_required_groups_are_provisioned(self):
         assert set(
             Group.objects.filter(name__in=(HR_FOOD_ROLE, EMPLOYEE_ROLE, VIEWER_ROLE)).values_list('name', flat=True)
@@ -36,6 +35,8 @@ class RolesTests(TestCase):
 
     def test_viewer_receives_read_only_food_permissions(self):
         viewer = Group.objects.get(name=VIEWER_ROLE)
-        permission_codes = set(viewer.permissions.filter(content_type__app_label='food').values_list('codename', flat=True))
+        permission_codes = set(
+            viewer.permissions.filter(content_type__app_label='food').values_list('codename', flat=True)
+        )
 
         assert permission_codes == set(VIEWER_FOOD_PERMISSIONS)

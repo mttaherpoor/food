@@ -16,7 +16,7 @@ class TimestampedModel(models.Model):
 
 
 class Food(CatalogImageMixin, TimestampedModel):
-    DEFAULT_IMAGE = "images/defaults/default-food.webp"
+    DEFAULT_IMAGE = 'images/defaults/default-food.webp'
 
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='foods/', blank=True)
@@ -40,7 +40,7 @@ class Food(CatalogImageMixin, TimestampedModel):
 
 
 class Side(CatalogImageMixin, TimestampedModel):
-    DEFAULT_IMAGE = "images/defaults/default-side.webp"
+    DEFAULT_IMAGE = 'images/defaults/default-side.webp'
 
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='sides/', blank=True)
@@ -54,7 +54,7 @@ class Side(CatalogImageMixin, TimestampedModel):
 
 
 class Drink(CatalogImageMixin, TimestampedModel):
-    DEFAULT_IMAGE = "images/defaults/default-drink.webp"
+    DEFAULT_IMAGE = 'images/defaults/default-drink.webp'
 
     name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='drinks/', blank=True)
@@ -188,7 +188,7 @@ class ReservationItem(TimestampedModel):
 
 
 class ReservationSideItem(TimestampedModel):
-    reservation_item = models.ForeignKey(ReservationItem,on_delete=models.PROTECT,related_name='side_items')
+    reservation_item = models.ForeignKey(ReservationItem, on_delete=models.PROTECT, related_name='side_items')
     side = models.ForeignKey(Side, on_delete=models.PROTECT, related_name='reservation_side_items')
 
     quantity = models.PositiveIntegerField()
@@ -212,7 +212,7 @@ class ReservationSideItem(TimestampedModel):
 
 
 class ReservationDrinkItem(TimestampedModel):
-    reservation_item = models.ForeignKey(ReservationItem,on_delete=models.PROTECT,related_name='drink_items')
+    reservation_item = models.ForeignKey(ReservationItem, on_delete=models.PROTECT, related_name='drink_items')
     drink = models.ForeignKey(Drink, on_delete=models.PROTECT, related_name='reservation_drink_items')
 
     quantity = models.PositiveIntegerField()

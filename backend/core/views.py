@@ -61,21 +61,25 @@ class ConfigViewSet(viewsets.ViewSet):
         config = SiteSettings.objects.filter(pk=1).first()
 
         if config is None:
-            return Response({
-                'site_name': 'فودسک',
-                'site_name_en': 'Foodesk',
-                'site_description': 'سامانه رزرو غذای سازمانی',
-                'logo_url': None,
-                'favicon_url': None,
-            })
+            return Response(
+                {
+                    'site_name': 'فودسک',
+                    'site_name_en': 'Foodesk',
+                    'site_description': 'سامانه رزرو غذای سازمانی',
+                    'logo_url': None,
+                    'favicon_url': None,
+                }
+            )
 
-        return Response({
-            'site_name': config.site_name,
-            'site_name_en': config.site_name_en,
-            'site_description': config.site_description,
-            'logo_url': config.logo.url if config.logo else None,
-            'favicon_url': config.favicon.url if config.favicon else None,
-        })
+        return Response(
+            {
+                'site_name': config.site_name,
+                'site_name_en': config.site_name_en,
+                'site_description': config.site_description,
+                'logo_url': config.logo.url if config.logo else None,
+                'favicon_url': config.favicon.url if config.favicon else None,
+            }
+        )
 
 
 class AuthViewSet(viewsets.GenericViewSet):

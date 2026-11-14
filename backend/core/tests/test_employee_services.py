@@ -66,9 +66,7 @@ class EmployeeServiceTests(TestCase):
                 department_number='003',
             )
 
-        self.assertFalse(
-            CustomUser.objects.filter(username='001234').exists()
-        )
+        self.assertFalse(CustomUser.objects.filter(username='001234').exists())
 
     def test_profile_personnel_number_follows_username(self):
         employee = CustomUser.objects.create_user(
@@ -88,6 +86,4 @@ class EmployeeServiceTests(TestCase):
         self.assertEqual(profile.personnel_number, '009876')
 
     def test_employee_group_is_available(self):
-        self.assertTrue(
-            Group.objects.filter(name=EMPLOYEE_ROLE).exists()
-        )
+        self.assertTrue(Group.objects.filter(name=EMPLOYEE_ROLE).exists())

@@ -26,7 +26,6 @@ def _save_menu_workbook(path, *, rows):
 
 
 class MonthlyMenuExcelImportTests(TestCase):
-
     def setUp(self):
         self._temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self._temp_dir.cleanup)

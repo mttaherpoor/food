@@ -27,7 +27,6 @@ def _save_catalog_workbook(path, *, foods, sides, drinks):
 
 
 class CatalogExcelImportTests(TestCase):
-
     def setUp(self):
         self._temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self._temp_dir.cleanup)

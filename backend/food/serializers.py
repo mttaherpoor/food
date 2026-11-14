@@ -12,8 +12,8 @@ class CatalogImageSerializerMixin:
     def get_image_data(self, obj):
         data = obj.image_data
         return {
-            "url": data.url,
-            "alt": data.alt,
+            'url': data.url,
+            'alt': data.alt,
         }
 
     def validate_image(self, value):
@@ -113,17 +113,15 @@ def validate_catalog_selections(attrs, raw_data):
             continue
 
         if singular in raw_data or f'{singular}_quantity' in raw_data:
-            raise serializers.ValidationError({
-                plural: 'روش قدیمی و جدید انتخاب را هم‌زمان ارسال نکنید.'
-            })
+            raise serializers.ValidationError({plural: 'روش قدیمی و جدید انتخاب را هم‌زمان ارسال نکنید.'})
 
         seen = set()
         for entry in attrs.get(plural, []):
             product_id = entry[singular].pk
             if product_id in seen:
-                raise serializers.ValidationError({
-                    plural: 'هر محصول فقط یک بار قابل انتخاب است؛ تعداد را افزایش دهید.'
-                })
+                raise serializers.ValidationError(
+                    {plural: 'هر محصول فقط یک بار قابل انتخاب است؛ تعداد را افزایش دهید.'}
+                )
             seen.add(product_id)
 
     return attrs
@@ -168,7 +166,6 @@ class ReservationRevisionInputSerializer(serializers.Serializer):
     side_quantity = serializers.IntegerField(min_value=1, required=False)
     drink = serializers.PrimaryKeyRelatedField(queryset=Drink.objects.all(), required=False, allow_null=True)
     drink_quantity = serializers.IntegerField(min_value=1, required=False)
-
 
     def to_internal_value(self, data):
         attrs = super().to_internal_value(data)
@@ -251,8 +248,8 @@ class ReservationSerializer(serializers.ModelSerializer):
 
 class WeeklyMenuSerializer(serializers.ModelSerializer):
     can_reserve = serializers.SerializerMethodField()
-    food_name = serializers.CharField(source="food.name", read_only=True)
-    food_image = serializers.ImageField(source="food.image", read_only=True)
+    food_name = serializers.CharField(source='food.name', read_only=True)
+    food_image = serializers.ImageField(source='food.image', read_only=True)
     food_image_data = serializers.SerializerMethodField()
     food_price = serializers.IntegerField(
         source='food.total_price',
@@ -277,8 +274,8 @@ class WeeklyMenuSerializer(serializers.ModelSerializer):
     def get_food_image_data(self, obj):
         data = obj.food.image_data
         return {
-            "url": data.url,
-            "alt": data.alt,
+            'url': data.url,
+            'alt': data.alt,
         }
 
     def get_reservation(self, menu):
@@ -289,7 +286,6 @@ class WeeklyMenuSerializer(serializers.ModelSerializer):
     def get_can_reserve(self, menu):
         from food.services import is_reservation_window_open
 
-        return (
-            menu.status == MenuStatus.AVAILABLE
-            and is_reservation_window_open(menu, settings.RESERVATION_CUTOFF_HOUR)
+        return menu.status == MenuStatus.AVAILABLE and is_reservation_window_open(
+            menu, settings.RESERVATION_CUTOFF_HOUR
         )

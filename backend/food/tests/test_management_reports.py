@@ -113,14 +113,19 @@ class ManagementReportTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json(), [{
-            'date': '2099-01-02',
-            'food': 'Ghormeh sabzi',
-            'reserved_count': 1,
-            'cancelled_count': 1,
-            'food_quantity': 1,
-            'total_toman': 1_300_000,
-        }])
+        self.assertEqual(
+            response.json(),
+            [
+                {
+                    'date': '2099-01-02',
+                    'food': 'Ghormeh sabzi',
+                    'reserved_count': 1,
+                    'cancelled_count': 1,
+                    'food_quantity': 1,
+                    'total_toman': 1_300_000,
+                }
+            ],
+        )
 
     def test_daily_report_multiselect_excludes_history_and_cancellations(self):
         viewer = create_user_in_group('viewer-multi', VIEWER_ROLE)
@@ -208,14 +213,19 @@ class ManagementReportTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json(), [{
-            'date': '2099-02-03',
-            'food': 'Multi Food',
-            'reserved_count': 1,
-            'cancelled_count': 1,
-            'food_quantity': 2,
-            'total_toman': 3_390_000,
-        }])
+        self.assertEqual(
+            response.json(),
+            [
+                {
+                    'date': '2099-02-03',
+                    'food': 'Multi Food',
+                    'reserved_count': 1,
+                    'cancelled_count': 1,
+                    'food_quantity': 2,
+                    'total_toman': 3_390_000,
+                }
+            ],
+        )
 
         self.assertEqual(current.total_price, 3_390_000)
         self.assertEqual(reservation.total_price, 3_390_000)
@@ -278,31 +288,37 @@ class ManagementReportTests(TestCase):
         from food.jalali import format_jalali_date
 
         self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0][:7], (
-            'روز شمسی',
-            'شماره ساختمان',
-            'کد پرسنلی',
-            'شماره دپارتمان',
-            'نام غذا',
-            'تعداد غذا',
-            'قیمت واحد غذا با ظرف (تومان)',
-        ))
-        self.assertEqual(rows[1], (
-            format_jalali_date(date(2099, 2, 3)),
-            None,
-            'report-excel',
-            '003',
-            'Excel Multi Food',
-            2,
-            1_100_000,
-            'Excel Doogh',
-            3,
-            150_000,
-            'Excel Salad',
-            2,
-            200_000,
-            3_050_000,
-        ))
+        self.assertEqual(
+            rows[0][:7],
+            (
+                'روز شمسی',
+                'شماره ساختمان',
+                'کد پرسنلی',
+                'شماره دپارتمان',
+                'نام غذا',
+                'تعداد غذا',
+                'قیمت واحد غذا با ظرف (تومان)',
+            ),
+        )
+        self.assertEqual(
+            rows[1],
+            (
+                format_jalali_date(date(2099, 2, 3)),
+                None,
+                'report-excel',
+                '003',
+                'Excel Multi Food',
+                2,
+                1_100_000,
+                'Excel Doogh',
+                3,
+                150_000,
+                'Excel Salad',
+                2,
+                200_000,
+                3_050_000,
+            ),
+        )
 
         workbook.close()
 
@@ -361,13 +377,22 @@ class ManagementReportTests(TestCase):
         # Deliberately create records in an order different
         # from the required Excel sorting order.
         _, _later_item = reserve(
-            '0001', second_day, building_02, '02',
+            '0001',
+            second_day,
+            building_02,
+            '02',
         )
         _, high_number_item = reserve(
-            '0010', first_day, building_07, '07',
+            '0010',
+            first_day,
+            building_07,
+            '07',
         )
         _, low_number_item = reserve(
-            '0002', first_day, building_07, '07',
+            '0002',
+            first_day,
+            building_07,
+            '07',
         )
 
         # The snapshot must win over the employee's profile
@@ -492,13 +517,7 @@ class ManagementReportTests(TestCase):
         )
         self.assertEqual(headers[-1], 'قیمت کل (تومان)')
 
-        expected_total = (
-            2 * 1_100_000
-            + 2 * 150_000
-            + 1 * 120_000
-            + 3 * 100_000
-            + 1 * 200_000
-        )
+        expected_total = 2 * 1_100_000 + 2 * 150_000 + 1 * 120_000 + 3 * 100_000 + 1 * 200_000
         self.assertEqual(first[-1], expected_total)
 
         # The identifiers must remain text to preserve leading zeros.
@@ -513,7 +532,6 @@ class ManagementReportTests(TestCase):
         self.assertEqual(rows[2][7:19], (None,) * 12)
 
         workbook.close()
-
 
     def test_buildings_report_groups_active_reservations_by_day(self):
         viewer = create_user_in_group('viewer-buildings', VIEWER_ROLE)
@@ -549,16 +567,18 @@ class ManagementReportTests(TestCase):
         )
 
         def add_reservation(
-            person, menu, building, snapshot, quantity,
-            *, cancelled=False,
+            person,
+            menu,
+            building,
+            snapshot,
+            quantity,
+            *,
+            cancelled=False,
         ):
             reservation = Reservation.objects.create(
                 user=employees[person],
                 menu=menu,
-                status=(
-                    Reservation.Status.CANCELLED
-                    if cancelled else Reservation.Status.RESERVED
-                ),
+                status=(Reservation.Status.CANCELLED if cancelled else Reservation.Status.RESERVED),
             )
             item = ReservationItem.objects.create(
                 reservation=reservation,
@@ -573,28 +593,52 @@ class ManagementReportTests(TestCase):
         # Database insertion order is deliberately different
         # from the required building order.
         reservation_07, _ = add_reservation(
-            'b-002', day_1, building_07, '07', 1,
+            'b-002',
+            day_1,
+            building_07,
+            '07',
+            1,
         )
 
         # The saved building snapshot must take priority.
         add_reservation(
-            'b-001', day_1, building_07, '02', 2,
+            'b-001',
+            day_1,
+            building_07,
+            '02',
+            2,
         )
         add_reservation(
-            'b-003', day_1, building_02, '02', 3,
+            'b-003',
+            day_1,
+            building_02,
+            '02',
+            3,
         )
         add_reservation(
-            'b-001', day_2, building_07, '07', 2,
+            'b-001',
+            day_2,
+            building_07,
+            '07',
+            2,
         )
 
         # Legacy reservation without a delivery building.
         add_reservation(
-            'b-004', day_1, None, None, 1,
+            'b-004',
+            day_1,
+            None,
+            None,
+            1,
         )
 
         # Cancelled reservation must be excluded.
         add_reservation(
-            'b-003', day_2, building_02, '02', 8,
+            'b-003',
+            day_2,
+            building_02,
+            '02',
+            8,
             cancelled=True,
         )
 
@@ -616,40 +660,43 @@ class ManagementReportTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json(), {
-            'buildings': [
-                {
-                    'building_number': '02',
-                    'reserved_count': 2,
-                    'days': [
-                        {
-                            'date': '2099-04-01',
-                            'food': 'Building Report Food',
-                            'reserved_count': 2,
-                            'food_quantity': 5,
-                        },
-                    ],
-                },
-                {
-                    'building_number': '07',
-                    'reserved_count': 2,
-                    'days': [
-                        {
-                            'date': '2099-04-01',
-                            'food': 'Building Report Food',
-                            'reserved_count': 1,
-                            'food_quantity': 1,
-                        },
-                        {
-                            'date': '2099-04-02',
-                            'food': 'Building Report Food',
-                            'reserved_count': 1,
-                            'food_quantity': 2,
-                        },
-                    ],
-                },
-            ],
-        })
+        self.assertEqual(
+            response.json(),
+            {
+                'buildings': [
+                    {
+                        'building_number': '02',
+                        'reserved_count': 2,
+                        'days': [
+                            {
+                                'date': '2099-04-01',
+                                'food': 'Building Report Food',
+                                'reserved_count': 2,
+                                'food_quantity': 5,
+                            },
+                        ],
+                    },
+                    {
+                        'building_number': '07',
+                        'reserved_count': 2,
+                        'days': [
+                            {
+                                'date': '2099-04-01',
+                                'food': 'Building Report Food',
+                                'reserved_count': 1,
+                                'food_quantity': 1,
+                            },
+                            {
+                                'date': '2099-04-02',
+                                'food': 'Building Report Food',
+                                'reserved_count': 1,
+                                'food_quantity': 2,
+                            },
+                        ],
+                    },
+                ],
+            },
+        )
 
     def test_buildings_report_rejects_invalid_range(self):
         viewer = create_user_in_group('viewer-buildings-invalid', VIEWER_ROLE)

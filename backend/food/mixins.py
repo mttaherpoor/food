@@ -10,11 +10,11 @@ class ImageData:
 
 
 class CatalogImageMixin:
-    DEFAULT_IMAGE = "images/defaults/default-food.webp"
+    DEFAULT_IMAGE = 'images/defaults/default-food.webp'
 
     @property
     def image_data(self) -> ImageData:
-        image = getattr(self, "image", None)
+        image = getattr(self, 'image', None)
 
         if image:
             return ImageData(
