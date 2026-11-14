@@ -137,7 +137,18 @@ export default function ReportPage() {
       const url = URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'food-daily-report.xlsx'
+      const parts = new Intl.DateTimeFormat('en-US-u-ca-persian', {
+        timeZone: 'Asia/Tehran',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(new Date())
+
+      const datePart = (type: string) =>
+        parts.find((part) => part.type === type)?.value
+
+      const exportDate = `${datePart('year')}-${datePart('month')}-${datePart('day')}`
+      link.download = `food-daily-report-${exportDate}.xlsx`
       document.body.appendChild(link)
       link.click()
       link.remove()
